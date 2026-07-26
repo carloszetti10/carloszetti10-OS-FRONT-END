@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fontes: Sora para títulos/marca (geométrica, moderna), Inter para o resto
+   (ótima legibilidade em telas densas de tabela/formulário, como um ERP exige). */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap");
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-surface-subtle text-neutral-900 antialiased;
+    @apply dark:bg-surface-dark dark:text-neutral-100;
+  }
+  /* Foco visível em qualquer elemento interativo (acessibilidade) */
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-surface-light dark:ring-offset-surface-dark;
+  }
+  * {
+    @apply border-neutral-200 dark:border-neutral-800;
+  }
+}
+
+@layer utilities {
+  /* Scrollbar discreta, combina com o resto do visual clean */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-neutral-300 dark:bg-neutral-700 rounded-full;
+  }
+}

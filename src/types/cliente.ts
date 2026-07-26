@@ -1,0 +1,44 @@
+import { TipoPessoa } from "./enums";
+
+// Espelha ClienteDto (resposta) do back
+export interface Cliente {
+  idCliente: number;
+  razaoSocial?: string | null;
+  nomeFantasia?: string | null;
+  tipoPessoa: TipoPessoa;
+  documento: string;
+  telefone?: string | null;
+  email?: string | null;
+  cep: string;
+  uf?: string | null;
+  cidade?: string | null;
+  rua?: string | null;
+  numero?: string | null;
+  ativo: boolean;
+}
+
+// Espelha CriarClienteDto
+export interface CriarClientePayload {
+  tipoPessoa: TipoPessoa;
+  nomeFantasia: string;
+  razaoSocial?: string;
+  documento: string;
+  email?: string;
+  telefone?: string;
+  cep: string;
+  numero?: string;
+}
+
+// Espelha AtualizarClienteDto (igual ao de criar + Ativo)
+export interface AtualizarClientePayload extends CriarClientePayload {
+  ativo: boolean;
+}
+
+// Resposta de GET /Clientes/consulta-cep/{cep}
+export interface ViaCepResponse {
+  cep: string;
+  logradouro: string;
+  bairro: string;
+  localidade: string;
+  uf: string;
+}
