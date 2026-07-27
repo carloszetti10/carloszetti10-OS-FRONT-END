@@ -5,10 +5,12 @@ import {
   Users,
   UserCog,
   Tags,
+  ShieldCheck,
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { usePodeGerenciarPermissoes } from "@/hooks/usePermissoes";
 
 interface SidebarProps {
   recolhida: boolean;
@@ -25,6 +27,12 @@ const ITENS_MENU = [
 
 /** Menu lateral fixo, recolhível (vira ícone-only), e Drawer no mobile (ver DashboardLayout) */
 export function Sidebar({ recolhida, aoAlternar }: SidebarProps) {
+  const podeGerenciarPermissoes = usePodeGerenciarPermissoes();
+
+  const itens = podeGerenciarPermissoes
+    ? [...ITENS_MENU, { to: "/permissoes", label: "Permissões", icon: ShieldCheck }]
+    : ITENS_MENU;
+
   return (
     <aside
       className={cn(
@@ -40,7 +48,7 @@ export function Sidebar({ recolhida, aoAlternar }: SidebarProps) {
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-3 scrollbar-thin">
-        {ITENS_MENU.map(({ to, label, icon: Icon, fim }) => (
+        {itens.map(({ to, label, icon: Icon, fim }) => (
           <NavLink
             key={to}
             to={to}

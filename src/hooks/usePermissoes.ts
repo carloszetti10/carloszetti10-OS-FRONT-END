@@ -17,3 +17,13 @@ export function usePodeVerTodasAsOs(): boolean {
   const permissoes = obterPermissoesDoToken(token);
   return permissoes.includes("Cliente.Atualizar");
 }
+
+/**
+ * Essa é a claim real "Usuario.GerenciarPermissoes" (existe de propósito no
+ * back pra isso, então aqui não é inferência — é a permissão exata).
+ */
+export function usePodeGerenciarPermissoes(): boolean {
+  const token = useAuthStore((s) => s.token);
+  const permissoes = obterPermissoesDoToken(token);
+  return permissoes.includes("Usuario.GerenciarPermissoes");
+}

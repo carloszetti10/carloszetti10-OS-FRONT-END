@@ -16,7 +16,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { StatusOsBadge } from "@/components/os/StatusOsBadge";
 import { OrdemServicoFormModal } from "@/components/os/OrdemServicoFormModal";
-import { StatusOs, STATUS_OS_LABEL } from "@/types/enums";
+import { STATUS_OS_LABEL } from "@/types/enums";
 import type { OrdemServico } from "@/types/ordemServico";
 import { formatarData } from "@/utils/formatters";
 import { useToastStore } from "@/stores/toastStore";

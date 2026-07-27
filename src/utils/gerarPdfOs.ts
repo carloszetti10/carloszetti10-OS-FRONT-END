@@ -162,7 +162,7 @@ export async function gerarPdfOs(dados: DadosPdfOs): Promise<Uint8Array> {
 
 function desenharCelula(
   page: PDFPage,
-  fonte: PDFFont,
+  _fonte: PDFFont,
   fonteNegrito: PDFFont,
   x: number,
   y: number,

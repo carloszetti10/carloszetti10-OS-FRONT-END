@@ -6,6 +6,7 @@ const ROTULOS: Record<string, string> = {
   clientes: "Clientes",
   funcionarios: "Funcionários",
   "tipos-atendimento": "Tipos de Atendimento",
+  permissoes: "Permissões",
   perfil: "Meu perfil",
   configuracoes: "Configurações",
 };

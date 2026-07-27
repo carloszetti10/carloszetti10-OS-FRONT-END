@@ -9,6 +9,7 @@ import OrdemServicoDetalhe from "@/pages/ordens-servico/OrdemServicoDetalhe";
 import ClientesList from "@/pages/clientes/ClientesList";
 import FuncionariosList from "@/pages/funcionarios/FuncionariosList";
 import TiposAtendimentoList from "@/pages/tipos-atendimento/TiposAtendimentoList";
+import GerenciarPermissoes from "@/pages/permissoes/GerenciarPermissoes";
 import Perfil from "@/pages/Perfil";
 import Configuracoes from "@/pages/Configuracoes";
 import AssinaturaPublica from "@/pages/assinatura/AssinaturaPublica";
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="/clientes" element={<ClientesList />} />
             <Route path="/funcionarios" element={<FuncionariosList />} />
             <Route path="/tipos-atendimento" element={<TiposAtendimentoList />} />
+            <Route path="/permissoes" element={<GerenciarPermissoes />} />
             <Route path="/perfil" element={<Perfil />} />
             <Route path="/configuracoes" element={<Configuracoes />} />
           </Route>

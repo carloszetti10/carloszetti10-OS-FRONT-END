@@ -45,15 +45,13 @@ export default function AssinaturaPublica() {
       const pdfBytes = await gerarPdfOs({
         idOs: dados.idOs,
         tituloOs: dados.tituloOs,
-        descricao: dados.descricao,
-        relatorioTecnico: dados.relatorioTecnico || dados.descricao,
         nomeTipoAtendimento: dados.nomeTipoAtendimento,
-
         nomeCliente: dados.nomeCliente,
         documentoCliente: dados.documentoCliente,
         dataHoraInicio: dados.dataHoraInicio,
         dataHoraFim: dados.dataHoraFim,
-
+        descricao: dados.descricao,
+        relatorioTecnico: dados.relatorioTecnico || "",
         nomeFuncionario: dados.nomeFuncionario,
         assinaturaFuncionarioBase64: dados.assinaturaFuncionarioBase64,
         nomeSignatarioCliente: nome,
