@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Plus, Search, Eye, Trash2, ArrowUpDown } from "lucide-react";
+import { Plus, Search, Eye, Trash2, ArrowUpDown, FileDown } from "lucide-react";
 import { useOrdensServico } from "@/hooks/useOrdensServico";
 import { useClientes } from "@/hooks/useClientes";
 import { useFuncionarios } from "@/hooks/useFuncionarios";
@@ -16,13 +16,13 @@ import { Pagination } from "@/components/ui/Pagination";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { StatusOsBadge } from "@/components/os/StatusOsBadge";
 import { OrdemServicoFormModal } from "@/components/os/OrdemServicoFormModal";
-import { STATUS_OS_LABEL } from "@/types/enums";
+import { StatusOs, STATUS_OS_LABEL } from "@/types/enums";
 import type { OrdemServico } from "@/types/ordemServico";
 import { formatarData } from "@/utils/formatters";
 import { useToastStore } from "@/stores/toastStore";
 import { extrairMensagemErro } from "@/utils/errorHandler";
 
-type CampoOrdenacao = "tituloOs" | "nomeCliente" | "status" | "prazo";
+type CampoOrdenacao = "idOs" | "tituloOs" | "nomeCliente" | "status" | "prazo";
 const ITENS_POR_PAGINA = 10;
 
 export default function OrdensServicoList() {
@@ -42,6 +42,7 @@ export default function OrdensServicoList() {
   const [pagina, setPagina] = useState(1);
   const [osParaExcluir, setOsParaExcluir] = useState<OrdemServico | null>(null);
   const [excluindo, setExcluindo] = useState(false);
+  const [baixandoPdfId, setBaixandoPdfId] = useState<number | null>(null);
 
   const modalAberto = searchParams.get("nova") === "1";
   const abrirModal = () => setSearchParams({ nova: "1" });
@@ -100,6 +101,20 @@ export default function OrdensServicoList() {
     }
   }
 
+  async function aoAbrirPdf(idOs: number) {
+    setBaixandoPdfId(idOs);
+    try {
+      const blob = await ordemServicoService.obterPdf(idOs);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (erro) {
+      mostrarToast(extrairMensagemErro(erro), "erro");
+    } finally {
+      setBaixandoPdfId(null);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -152,7 +167,7 @@ export default function OrdensServicoList() {
         </div>
 
         {isLoading ? (
-          <SkeletonTabela colunas={5} />
+          <SkeletonTabela colunas={6} />
         ) : listaPagina.length === 0 ? (
           <EmptyState
             titulo="Nenhuma OS encontrada"
@@ -164,6 +179,7 @@ export default function OrdensServicoList() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-neutral-100 text-xs uppercase text-neutral-400 dark:border-neutral-800">
+                  <CabecalhoOrdenavel label="ID" campo="idOs" atual={ordenarPor} asc={ordemAsc} aoClicar={alternarOrdenacao} />
                   <CabecalhoOrdenavel label="Título" campo="tituloOs" atual={ordenarPor} asc={ordemAsc} aoClicar={alternarOrdenacao} />
                   <CabecalhoOrdenavel label="Cliente" campo="nomeCliente" atual={ordenarPor} asc={ordemAsc} aoClicar={alternarOrdenacao} />
                   <CabecalhoOrdenavel label="Status" campo="status" atual={ordenarPor} asc={ordemAsc} aoClicar={alternarOrdenacao} />
@@ -174,6 +190,7 @@ export default function OrdensServicoList() {
               <tbody>
                 {listaPagina.map((os) => (
                   <tr key={os.idOs} className="border-b border-neutral-50 last:border-0 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-800/50">
+                    <td className="py-3 pr-2 text-neutral-400">#{os.idOs}</td>
                     <td className="py-3 pr-2 font-medium">
                       <Link to={`/ordens-servico/${os.idOs}`} className="hover:text-brand-600">
                         {os.tituloOs}
@@ -184,6 +201,16 @@ export default function OrdensServicoList() {
                     <td className="py-3 pr-2 text-neutral-600 dark:text-neutral-300">{formatarData(os.prazo)}</td>
                     <td className="py-3 pr-2">
                       <div className="flex justify-end gap-1">
+                        {os.possuiPdfAssinado && (
+                          <button
+                            onClick={() => aoAbrirPdf(os.idOs)}
+                            disabled={baixandoPdfId === os.idOs}
+                            className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-brand-600 disabled:opacity-50 dark:hover:bg-neutral-800"
+                            title="Ver PDF"
+                          >
+                            <FileDown className="h-4 w-4" />
+                          </button>
+                        )}
                         <Link
                           to={`/ordens-servico/${os.idOs}`}
                           className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-brand-600 dark:hover:bg-neutral-800"

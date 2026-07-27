@@ -2,10 +2,9 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Lock, FileText, User as UserIcon, CheckCircle2, Pencil, X as XIcon, FileSignature, FileDown } from "lucide-react";
+import { ArrowLeft, Lock, FileText, User as UserIcon, Pencil, FileSignature, FileDown, PlayCircle, Ban } from "lucide-react";
 import {
   useOrdemServico,
-  useAtualizarOrdemServico,
   useAtualizarRelatorio,
   useAlterarStatusOs,
   useFuncionariosDaOs,
@@ -14,18 +13,17 @@ import { useFuncionarioLogado } from "@/hooks/useFuncionarioLogado";
 import { ordemServicoService } from "@/services/ordemServicoService";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
-import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { TelaCarregando } from "@/components/ui/Spinner";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { StatusOsBadge } from "@/components/os/StatusOsBadge";
 import { GerenciarFuncionariosOs } from "@/components/os/GerenciarFuncionariosOs";
 import { GerarRelatorioModal } from "@/components/os/GerarRelatorioModal";
-import { StatusOs, STATUS_OS_LABEL } from "@/types/enums";
+import { EditarOrdemServicoModal } from "@/components/os/EditarOrdemServicoModal";
+import { StatusOs } from "@/types/enums";
 import { relatorioSchema, type RelatorioFormValues } from "@/schemas/ordemServicoSchema";
-import { formatarDataHora, paraIso, paraInputDatetime } from "@/utils/formatters";
+import { formatarDataHora } from "@/utils/formatters";
 import { useToastStore } from "@/stores/toastStore";
 import { extrairMensagemErro } from "@/utils/errorHandler";
 
@@ -42,12 +40,8 @@ export default function OrdemServicoDetalhe() {
   const { mutate: salvarRelatorio, isPending: salvandoRelatorio, error: erroRelatorio } =
     useAtualizarRelatorio(idOs);
   const { mutate: alterarStatus, isPending: alterandoStatus } = useAlterarStatusOs(idOs);
-  const { mutate: atualizarOs, isPending: salvandoDatas, error: erroDatas } = useAtualizarOrdemServico(idOs);
-  const [statusSelecionado, setStatusSelecionado] = useState<StatusOs | "">("");
-  const [confirmandoConclusao, setConfirmandoConclusao] = useState(false);
-  const [editandoDatas, setEditandoDatas] = useState(false);
-  const [inicioEditado, setInicioEditado] = useState("");
-  const [prazoEditado, setPrazoEditado] = useState("");
+  const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false);
+  const [editarAberto, setEditarAberto] = useState(false);
   const [gerarRelatorioAberto, setGerarRelatorioAberto] = useState(false);
   const [baixandoPdf, setBaixandoPdf] = useState(false);
 
@@ -64,6 +58,8 @@ export default function OrdemServicoDetalhe() {
   if (!os) return <p className="text-neutral-500">Ordem de serviço não encontrada.</p>;
 
   const osConcluida = os.status === StatusOs.Concluida;
+  const podeIniciar = os.status === StatusOs.Agendada;
+  const podeCancelar = !osConcluida && os.status !== StatusOs.Cancelada;
   const ehResponsavel = os.funcionarios.some(
     (f) => f.responsavel && f.idFuncionario === funcionarioLogado?.id
   );
@@ -71,12 +67,6 @@ export default function OrdemServicoDetalhe() {
   // O back valida isso de verdade (VerificarTecnicoEResponsavelAsync + falharSeOSConcluida);
   // aqui é só pra já deixar a UI coerente e não deixar o usuário tentar em vão.
   const podeEditarRelatorio = ehResponsavel && !osConcluida;
-
-  // "Concluída" saiu da lista de opções do select: agora é sempre uma ação
-  // deliberada (botão + confirmação), nunca só mais um item de dropdown.
-  const opcoesStatus = Object.entries(STATUS_OS_LABEL).filter(
-    ([valor]) => Number(valor) !== os.status && Number(valor) !== StatusOs.Concluida
-  );
 
   // Trava pedida: só dá pra gerar/assinar o relatório depois que o relatório
   // técnico estiver preenchido (o back também valida isso).
@@ -103,59 +93,29 @@ export default function OrdemServicoDetalhe() {
     }
   }
 
-  function aoMudarStatus() {
-    if (!statusSelecionado) return;
+  function aoIniciar() {
+    // Data/hora de início é setada automaticamente pelo back ao iniciar —
+    // não é mais um campo que se define manualmente por aqui.
     alterarStatus(
-      { status: statusSelecionado },
+      { status: StatusOs.EmAtendimento },
       {
-        onSuccess: () => {
-          mostrarToast("Status atualizado.", "sucesso");
-          setStatusSelecionado("");
-        },
+        onSuccess: () => mostrarToast("Ordem de serviço iniciada.", "sucesso"),
         onError: (erro) => mostrarToast(extrairMensagemErro(erro), "erro"),
       }
     );
   }
 
-  function aoConfirmarConclusao() {
+  function aoConfirmarCancelamento() {
     alterarStatus(
-      { status: StatusOs.Concluida },
+      { status: StatusOs.Cancelada },
       {
         onSuccess: () => {
-          mostrarToast("Ordem de serviço concluída.", "sucesso");
-          setConfirmandoConclusao(false);
+          mostrarToast("Ordem de serviço cancelada.", "sucesso");
+          setConfirmandoCancelamento(false);
         },
         onError: (erro) => {
           mostrarToast(extrairMensagemErro(erro), "erro");
-          setConfirmandoConclusao(false);
-        },
-      }
-    );
-  }
-
-  function abrirEdicaoDatas() {
-    setInicioEditado(paraInputDatetime(os!.dataHoraInicio));
-    setPrazoEditado(paraInputDatetime(os!.prazo));
-    setEditandoDatas(true);
-  }
-
-  function aoSalvarDatas() {
-    atualizarOs(
-      {
-        tituloOs: os!.tituloOs,
-        descricao: os!.descricao,
-        idTipoAtendimento: os!.idTipoAtendimento,
-        idCliente: os!.idCliente,
-        status: os!.status,
-        dataHoraInicio: paraIso(inicioEditado) ?? null,
-        dataHoraFim: os!.dataHoraFim ?? null,
-        prazo: paraIso(prazoEditado) ?? null,
-        observacao: os!.observacao ?? undefined,
-      },
-      {
-        onSuccess: () => {
-          mostrarToast("Datas atualizadas.", "sucesso");
-          setEditandoDatas(false);
+          setConfirmandoCancelamento(false);
         },
       }
     );
@@ -172,7 +132,18 @@ export default function OrdemServicoDetalhe() {
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold">{os.tituloOs}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="font-display text-2xl font-bold">{os.tituloOs}</h1>
+            {ehResponsavel && !osConcluida && (
+              <button
+                onClick={() => setEditarAberto(true)}
+                title="Editar Ordem de Serviço"
+                className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-brand-600 dark:hover:bg-neutral-800"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            )}
+          </div>
           <p className="text-sm text-neutral-500">{os.nomeCliente} · {os.nomeTipoAtendimento}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -206,64 +177,21 @@ export default function OrdemServicoDetalhe() {
           )}
 
           <div className="border-t border-neutral-100 pt-4 dark:border-neutral-800">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-xs uppercase tracking-wide text-neutral-400">Datas</p>
-              {!osConcluida && !editandoDatas && (
-                <button
-                  onClick={abrirEdicaoDatas}
-                  className="flex items-center gap-1 text-xs text-brand-600 hover:underline"
-                >
-                  <Pencil className="h-3 w-3" /> Editar
-                </button>
-              )}
+            <p className="mb-2 text-xs uppercase tracking-wide text-neutral-400">Datas</p>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-neutral-400">Início</p>
+                <p>{formatarDataHora(os.dataHoraInicio)}</p>
+              </div>
+              <div>
+                <p className="text-neutral-400">Prazo</p>
+                <p>{formatarDataHora(os.prazo)}</p>
+              </div>
+              <div>
+                <p className="text-neutral-400">Finalizada em</p>
+                <p>{formatarDataHora(os.dataHoraFim)}</p>
+              </div>
             </div>
-
-            {editandoDatas ? (
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Input
-                    label="Data/hora de início"
-                    type="datetime-local"
-                    value={inicioEditado}
-                    onChange={(e) => setInicioEditado(e.target.value)}
-                  />
-                  <Input
-                    label="Prazo"
-                    type="datetime-local"
-                    value={prazoEditado}
-                    onChange={(e) => setPrazoEditado(e.target.value)}
-                  />
-                </div>
-                {erroDatas && (
-                  <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950">
-                    {extrairMensagemErro(erroDatas)}
-                  </p>
-                )}
-                <div className="flex justify-end gap-2">
-                  <Button variant="secondary" size="sm" onClick={() => setEditandoDatas(false)}>
-                    <XIcon className="h-4 w-4" /> Cancelar
-                  </Button>
-                  <Button size="sm" carregando={salvandoDatas} onClick={aoSalvarDatas}>
-                    Salvar datas
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-neutral-400">Início</p>
-                  <p>{formatarDataHora(os.dataHoraInicio)}</p>
-                </div>
-                <div>
-                  <p className="text-neutral-400">Prazo</p>
-                  <p>{formatarDataHora(os.prazo)}</p>
-                </div>
-                <div>
-                  <p className="text-neutral-400">Finalizada em</p>
-                  <p>{formatarDataHora(os.dataHoraFim)}</p>
-                </div>
-              </div>
-            )}
           </div>
         </Card>
 
@@ -299,38 +227,23 @@ export default function OrdemServicoDetalhe() {
             <GerenciarFuncionariosOs idOs={idOs} />
           )}
 
-          {!osConcluida && (
+          {(podeIniciar || podeCancelar) && (
             <div className="mt-4 space-y-2 border-t border-neutral-100 pt-4 dark:border-neutral-800">
-              <p className="text-sm font-medium">Alterar status</p>
-              <Select
-                value={statusSelecionado}
-                onChange={(e) => setStatusSelecionado(Number(e.target.value) as StatusOs)}
-              >
-                <option value="">Selecione…</option>
-                {opcoesStatus.map(([valor, rotulo]) => (
-                  <option key={valor} value={valor}>{rotulo}</option>
-                ))}
-              </Select>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="w-full"
-                disabled={!statusSelecionado}
-                carregando={alterandoStatus}
-                onClick={aoMudarStatus}
-              >
-                Atualizar status
-              </Button>
-
-              {/* Concluir é uma ação separada e deliberada, sempre com confirmação —
-                  não é só mais uma opção no dropdown de status. */}
-              <Button
-                size="sm"
-                className="w-full"
-                onClick={() => setConfirmandoConclusao(true)}
-              >
-                <CheckCircle2 className="h-4 w-4" /> Concluir OS
-              </Button>
+              {podeIniciar && (
+                <Button size="sm" className="w-full" carregando={alterandoStatus} onClick={aoIniciar}>
+                  <PlayCircle className="h-4 w-4" /> Iniciar OS
+                </Button>
+              )}
+              {podeCancelar && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() => setConfirmandoCancelamento(true)}
+                >
+                  <Ban className="h-4 w-4" /> Cancelar OS
+                </Button>
+              )}
             </div>
           )}
         </Card>
@@ -386,19 +299,24 @@ export default function OrdemServicoDetalhe() {
       </Card>
 
       <ConfirmDialog
-        aberto={confirmandoConclusao}
-        titulo="Concluir ordem de serviço"
-        mensagem="Tem certeza que deseja concluir esta OS? Depois de concluída, ela não pode mais ser editada nem ter o relatório alterado."
+        aberto={confirmandoCancelamento}
+        titulo="Cancelar ordem de serviço"
+        mensagem="Tem certeza que deseja cancelar esta OS? Essa ação não pode ser desfeita."
         confirmando={alterandoStatus}
-        aoConfirmar={aoConfirmarConclusao}
-        aoCancelar={() => setConfirmandoConclusao(false)}
-        textoConfirmar="Concluir OS"
-        variante="padrao"
+        aoConfirmar={aoConfirmarCancelamento}
+        aoCancelar={() => setConfirmandoCancelamento(false)}
+        textoConfirmar="Cancelar OS"
       />
 
       <GerarRelatorioModal
         aberto={gerarRelatorioAberto}
         aoFechar={() => setGerarRelatorioAberto(false)}
+        ordemServico={os}
+      />
+
+      <EditarOrdemServicoModal
+        aberto={editarAberto}
+        aoFechar={() => setEditarAberto(false)}
         ordemServico={os}
       />
     </div>

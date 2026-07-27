@@ -89,7 +89,7 @@ export default function ClientesList() {
         </div>
 
         {isLoading ? (
-          <SkeletonTabela colunas={4} />
+          <SkeletonTabela colunas={5} />
         ) : listaPagina.length === 0 ? (
           <EmptyState
             titulo="Nenhum cliente encontrado"
@@ -101,6 +101,7 @@ export default function ClientesList() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-neutral-100 text-xs uppercase text-neutral-400 dark:border-neutral-800">
+                  <th className="py-2.5 pr-2">ID</th>
                   <th className="py-2.5 pr-2">Nome</th>
                   <th className="py-2.5 pr-2">Tipo</th>
                   <th className="py-2.5 pr-2">Documento</th>
@@ -111,6 +112,7 @@ export default function ClientesList() {
               <tbody>
                 {listaPagina.map((c) => (
                   <tr key={c.idCliente} className="border-b border-neutral-50 last:border-0 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-800/50">
+                    <td className="py-3 pr-2 text-neutral-400">#{c.idCliente}</td>
                     <td className="py-3 pr-2 font-medium">{c.nomeFantasia}</td>
                     <td className="py-3 pr-2"><Badge cor="cinza">{TIPO_PESSOA_LABEL[c.tipoPessoa]}</Badge></td>
                     <td className="py-3 pr-2 text-neutral-600 dark:text-neutral-300">{c.documento}</td>

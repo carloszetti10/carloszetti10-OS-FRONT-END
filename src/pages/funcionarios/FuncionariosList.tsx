@@ -70,7 +70,7 @@ export default function FuncionariosList() {
         </div>
 
         {isLoading ? (
-          <SkeletonTabela colunas={4} />
+          <SkeletonTabela colunas={5} />
         ) : listaPagina.length === 0 ? (
           <EmptyState
             titulo="Nenhum funcionário encontrado"
@@ -82,6 +82,7 @@ export default function FuncionariosList() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-neutral-100 text-xs uppercase text-neutral-400 dark:border-neutral-800">
+                  <th className="py-2.5 pr-2">ID</th>
                   <th className="py-2.5 pr-2">Nome</th>
                   <th className="py-2.5 pr-2">Usuário</th>
                   <th className="py-2.5 pr-2">E-mail</th>
@@ -92,6 +93,7 @@ export default function FuncionariosList() {
               <tbody>
                 {listaPagina.map((f) => (
                   <tr key={f.id} className="border-b border-neutral-50 last:border-0 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-800/50">
+                    <td className="py-3 pr-2 text-neutral-400">#{f.id}</td>
                     <td className="py-3 pr-2">
                       <div className="flex items-center gap-2 font-medium">
                         <Avatar nome={f.nome} className="h-7 w-7 text-xs" />

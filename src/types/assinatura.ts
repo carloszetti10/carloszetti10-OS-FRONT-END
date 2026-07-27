@@ -11,7 +11,9 @@ export interface TokenAssinatura {
 }
 
 export interface AssinaturaPublica {
+  idOs: number;
   tituloOs: string;
+  nomeTipoAtendimento: string;
   nomeCliente: string;
   documentoCliente: string;
   dataHoraInicio?: string | null;

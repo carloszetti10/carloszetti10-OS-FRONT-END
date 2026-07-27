@@ -84,7 +84,7 @@ export default function TiposAtendimentoList() {
         </div>
 
         {isLoading ? (
-          <SkeletonTabela colunas={2} />
+          <SkeletonTabela colunas={3} />
         ) : listaPagina.length === 0 ? (
           <EmptyState
             titulo="Nenhum tipo de atendimento encontrado"
@@ -96,6 +96,7 @@ export default function TiposAtendimentoList() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-neutral-100 text-xs uppercase text-neutral-400 dark:border-neutral-800">
+                  <th className="py-2.5 pr-2">ID</th>
                   <th className="py-2.5 pr-2">Descrição</th>
                   <th className="py-2.5 pr-2 text-right">Ações</th>
                 </tr>
@@ -103,6 +104,7 @@ export default function TiposAtendimentoList() {
               <tbody>
                 {listaPagina.map((t) => (
                   <tr key={t.id} className="border-b border-neutral-50 last:border-0 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-800/50">
+                    <td className="py-3 pr-2 text-neutral-400">#{t.id}</td>
                     <td className="py-3 pr-2 font-medium">{t.descricao}</td>
                     <td className="py-3 pr-2">
                       <div className="flex justify-end gap-1">
