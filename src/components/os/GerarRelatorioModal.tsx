@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import QRCode from "qrcode";
-import { Copy, Check, FileSignature, RefreshCcw } from "lucide-react";
+import { FileSignature, RefreshCcw, Smartphone, Link2, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { SignaturePad, type SignaturePadHandle } from "@/components/ui/SignaturePad";
-import { useIniciarAssinatura } from "@/hooks/useAssinatura";
+import { LinkComQrCode } from "./LinkComQrCode";
+import { useIniciarAssinatura, useSubmeterAssinaturaCliente } from "@/hooks/useAssinatura";
 import { useFuncionarioLogado } from "@/hooks/useFuncionarioLogado";
+import { useClientes } from "@/hooks/useClientes";
 import { useToastStore } from "@/stores/toastStore";
 import { extrairMensagemErro } from "@/utils/errorHandler";
+import { gerarPdfOs, uint8ArrayParaBase64 } from "@/utils/gerarPdfOs";
 import type { OrdemServico } from "@/types/ordemServico";
 
 interface GerarRelatorioModalProps {
@@ -16,70 +19,120 @@ interface GerarRelatorioModalProps {
   ordemServico: OrdemServico;
 }
 
+type Etapa = "assinar-funcionario" | "escolher-modo" | "assinar-cliente-agora" | "link-gerado" | "concluido-local";
+
 /**
- * Fluxo: 1) funcionário assina (usa a assinatura salva ou desenha uma nova,
- * sempre com a opção de assinar de novo); 2) gera o token/link de 24h;
- * 3) mostra o link + QR code pra mandar pro cliente assinar no aparelho dele.
+ * Fluxo: 1) funcionário assina (usa a assinatura salva ou desenha uma nova);
+ * 2) escolhe como o CLIENTE vai assinar — agora, neste mesmo aparelho (útil
+ * quando estão frente a frente), ou por um link/QR code pro aparelho do
+ * próprio cliente (útil pra assinatura remota).
  */
 export function GerarRelatorioModal({ aberto, aoFechar, ordemServico }: GerarRelatorioModalProps) {
   const { data: funcionarioLogado } = useFuncionarioLogado();
-  const { mutate: iniciar, isPending, error, data: resultado, reset } = useIniciarAssinatura(ordemServico.idOs);
+  const { data: clientes } = useClientes();
+  const { mutate: iniciar, isPending: iniciando, error: erroIniciar, data: resultado, reset: resetIniciar } =
+    useIniciarAssinatura(ordemServico.idOs);
+  const { mutateAsync: submeterCliente, isPending: assinandoCliente } =
+    useSubmeterAssinaturaCliente(resultado?.token ?? "");
   const mostrarToast = useToastStore((s) => s.mostrar);
 
+  const [etapa, setEtapa] = useState<Etapa>("assinar-funcionario");
   const [usarAssinaturaSalva, setUsarAssinaturaSalva] = useState(true);
   const [salvarComoPadrao, setSalvarComoPadrao] = useState(true);
-  const [copiado, setCopiado] = useState(false);
-  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
-  const padRef = useRef<SignaturePadHandle>(null);
+  const [imagemFuncionarioUsada, setImagemFuncionarioUsada] = useState<string | null>(null);
+  const [nomeCliente, setNomeCliente] = useState("");
+  const [documentoCliente, setDocumentoCliente] = useState("");
+  const [erroAssinaturaCliente, setErroAssinaturaCliente] = useState<string | null>(null);
+
+  const padFuncionarioRef = useRef<SignaturePadHandle>(null);
+  const padClienteRef = useRef<SignaturePadHandle>(null);
 
   const temAssinaturaSalva = !!funcionarioLogado?.assinaturaPadrao;
 
   useEffect(() => {
     if (aberto) {
-      reset();
+      resetIniciar();
+      setEtapa("assinar-funcionario");
       setUsarAssinaturaSalva(temAssinaturaSalva);
-      setCopiado(false);
-      setQrCodeUrl(null);
+      setNomeCliente("");
+      setDocumentoCliente("");
+      setErroAssinaturaCliente(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aberto]);
 
   const link = resultado ? `${window.location.origin}/assinar/${resultado.token}` : null;
 
-  useEffect(() => {
-    if (!link) return;
-    QRCode.toDataURL(link, { margin: 1, width: 220 }).then(setQrCodeUrl).catch(() => setQrCodeUrl(null));
-  }, [link]);
-
-  function aoConfirmarAssinatura() {
-    const imagem = usarAssinaturaSalva ? funcionarioLogado?.assinaturaPadrao ?? null : padRef.current?.obterBase64() ?? null;
+  function aoConfirmarAssinaturaFuncionario() {
+    const imagem = usarAssinaturaSalva
+      ? funcionarioLogado?.assinaturaPadrao ?? null
+      : padFuncionarioRef.current?.obterBase64() ?? null;
 
     if (!imagem) {
       mostrarToast("Assine no campo antes de continuar.", "erro");
       return;
     }
 
+    setImagemFuncionarioUsada(imagem);
     iniciar(
       { imagemAssinaturaFuncionario: imagem, salvarComoPadrao: !usarAssinaturaSalva && salvarComoPadrao },
-      { onError: (erro) => mostrarToast(extrairMensagemErro(erro), "erro") }
+      {
+        onSuccess: () => setEtapa("escolher-modo"),
+        onError: (erro) => mostrarToast(extrairMensagemErro(erro), "erro"),
+      }
     );
   }
 
-  function copiarLink() {
-    if (!link) return;
-    navigator.clipboard.writeText(link);
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 2000);
+  async function aoConfirmarAssinaturaCliente() {
+    setErroAssinaturaCliente(null);
+    if (!nomeCliente.trim()) {
+      setErroAssinaturaCliente("Informe o nome de quem está assinando.");
+      return;
+    }
+    const assinaturaCliente = padClienteRef.current?.obterBase64();
+    if (!assinaturaCliente) {
+      setErroAssinaturaCliente("Peça pro cliente assinar no campo antes de continuar.");
+      return;
+    }
+
+    try {
+      const documentoCadastrado = clientes?.find((c) => c.idCliente === ordemServico.idCliente)?.documento ?? "";
+      const pdfBytes = await gerarPdfOs({
+        idOs: ordemServico.idOs,
+        tituloOs: ordemServico.tituloOs,
+        nomeTipoAtendimento: ordemServico.nomeTipoAtendimento,
+        nomeCliente: ordemServico.nomeCliente,
+        documentoCliente: documentoCadastrado,
+        dataHoraInicio: ordemServico.dataHoraInicio,
+        dataHoraFim: ordemServico.dataHoraFim,
+        descricao: ordemServico.descricao,
+        relatorioTecnico: ordemServico.relatorioTecnico || "",
+        nomeFuncionario: funcionarioLogado?.nome ?? "",
+        assinaturaFuncionarioBase64: imagemFuncionarioUsada,
+        nomeSignatarioCliente: nomeCliente,
+        assinaturaClienteBase64: assinaturaCliente,
+        dataAssinaturaCliente: new Date().toISOString(),
+      });
+      const pdfBase64 = uint8ArrayParaBase64(pdfBytes);
+
+      await submeterCliente({
+        nomeSignatario: nomeCliente,
+        documentoSignatario: documentoCliente || undefined,
+        imagemAssinatura: assinaturaCliente,
+        arquivoPdf: pdfBase64,
+      });
+
+      setEtapa("concluido-local");
+    } catch (erro) {
+      setErroAssinaturaCliente(extrairMensagemErro(erro));
+    }
   }
 
   return (
     <Modal aberto={aberto} aoFechar={aoFechar} titulo="Gerar Relatório" largura="sm">
-      {!resultado ? (
+      {etapa === "assinar-funcionario" && (
         <div className="space-y-4">
-          <p className="text-sm text-neutral-500">
-            Assine como responsável técnico. Depois disso, você vai receber um link pra mandar o
-            cliente assinar também — o link expira em 24 horas.
-          </p>
+          <p className="text-sm text-neutral-500">Assine como responsável técnico pra continuar.</p>
 
           {temAssinaturaSalva && usarAssinaturaSalva ? (
             <div className="space-y-3">
@@ -96,58 +149,111 @@ export function GerarRelatorioModal({ aberto, aoFechar, ordemServico }: GerarRel
             </div>
           ) : (
             <div className="space-y-2">
-              <SignaturePad ref={padRef} />
+              <SignaturePad ref={padFuncionarioRef} />
               <label className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-300">
-                <input
-                  type="checkbox"
-                  checked={salvarComoPadrao}
-                  onChange={(e) => setSalvarComoPadrao(e.target.checked)}
-                />
+                <input type="checkbox" checked={salvarComoPadrao} onChange={(e) => setSalvarComoPadrao(e.target.checked)} />
                 Salvar como minha assinatura padrão (usar automaticamente da próxima vez)
               </label>
               {temAssinaturaSalva && (
-                <button
-                  type="button"
-                  onClick={() => setUsarAssinaturaSalva(true)}
-                  className="text-xs text-brand-600 hover:underline"
-                >
+                <button type="button" onClick={() => setUsarAssinaturaSalva(true)} className="text-xs text-brand-600 hover:underline">
                   Usar minha assinatura salva em vez disso
                 </button>
               )}
             </div>
           )}
 
-          {error && (
+          {erroIniciar && (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950">
-              {extrairMensagemErro(error)}
+              {extrairMensagemErro(erroIniciar)}
             </p>
           )}
 
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="secondary" onClick={aoFechar}>Cancelar</Button>
-            <Button type="button" carregando={isPending} onClick={aoConfirmarAssinatura}>
-              <FileSignature className="h-4 w-4" /> Confirmar e gerar link
+            <Button type="button" carregando={iniciando} onClick={aoConfirmarAssinaturaFuncionario}>
+              <FileSignature className="h-4 w-4" /> Confirmar assinatura
             </Button>
           </div>
         </div>
-      ) : (
-        <div className="space-y-4 text-center">
-          <p className="text-sm text-neutral-600 dark:text-neutral-300">
-            Envie este link (ou o QR code) pro cliente assinar no aparelho dele. Válido por 24 horas.
-          </p>
+      )}
 
-          {qrCodeUrl && (
-            <img src={qrCodeUrl} alt="QR code do link de assinatura" className="mx-auto rounded-lg border border-neutral-200 dark:border-neutral-700" />
-          )}
+      {etapa === "escolher-modo" && (
+        <div className="space-y-3">
+          <p className="text-sm text-neutral-500">Assinatura registrada. Como o cliente vai assinar?</p>
 
-          <div className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-left text-xs dark:border-neutral-700 dark:bg-neutral-800">
-            <span className="flex-1 truncate text-neutral-600 dark:text-neutral-300">{link}</span>
-            <button onClick={copiarLink} className="shrink-0 rounded-md p-1.5 hover:bg-neutral-200 dark:hover:bg-neutral-700" title="Copiar link">
-              {copiado ? <Check className="h-4 w-4 text-brand-600" /> : <Copy className="h-4 w-4" />}
-            </button>
+          <button
+            type="button"
+            onClick={() => setEtapa("assinar-cliente-agora")}
+            className="flex w-full items-center gap-3 rounded-xl border border-neutral-200 p-4 text-left hover:border-brand-400 hover:bg-brand-50/50 dark:border-neutral-700 dark:hover:bg-brand-950/30"
+          >
+            <Smartphone className="h-5 w-5 shrink-0 text-brand-600" />
+            <span>
+              <span className="block font-medium">Agora, neste aparelho</span>
+              <span className="block text-xs text-neutral-500">O cliente assina na hora, direto aqui</span>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setEtapa("link-gerado")}
+            className="flex w-full items-center gap-3 rounded-xl border border-neutral-200 p-4 text-left hover:border-brand-400 hover:bg-brand-50/50 dark:border-neutral-700 dark:hover:bg-brand-950/30"
+          >
+            <Link2 className="h-5 w-5 shrink-0 text-brand-600" />
+            <span>
+              <span className="block font-medium">Link pro aparelho do cliente</span>
+              <span className="block text-xs text-neutral-500">Gera um link/QR code (válido por 24h) pra assinatura remota</span>
+            </span>
+          </button>
+        </div>
+      )}
+
+      {etapa === "assinar-cliente-agora" && (
+        <div className="space-y-4">
+          <button
+            type="button"
+            onClick={() => setEtapa("escolher-modo")}
+            className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-brand-600"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Voltar
+          </button>
+
+          <Input label="Nome do cliente" value={nomeCliente} onChange={(e) => setNomeCliente(e.target.value)} />
+          <Input
+            label="CPF/CNPJ (opcional)"
+            value={documentoCliente}
+            onChange={(e) => setDocumentoCliente(e.target.value)}
+          />
+
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-neutral-700 dark:text-neutral-300">Assinatura do cliente</p>
+            <SignaturePad ref={padClienteRef} />
           </div>
 
+          {erroAssinaturaCliente && (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950">{erroAssinaturaCliente}</p>
+          )}
+
+          <Button type="button" className="w-full" carregando={assinandoCliente} onClick={aoConfirmarAssinaturaCliente}>
+            <FileSignature className="h-4 w-4" /> Confirmar assinatura do cliente
+          </Button>
+        </div>
+      )}
+
+      {etapa === "link-gerado" && link && (
+        <div className="space-y-4">
+          <LinkComQrCode link={link} legenda="Envie este link (ou o QR code) pro cliente assinar no aparelho dele. Válido por 24 horas." />
           <Button type="button" className="w-full" onClick={aoFechar}>Concluir</Button>
+        </div>
+      )}
+
+      {etapa === "concluido-local" && (
+        <div className="flex flex-col items-center gap-3 py-4 text-center">
+          <CheckCircle2 className="h-10 w-10 text-brand-600" />
+          <p className="font-medium">Ordem de serviço assinada!</p>
+          <p className="text-sm text-neutral-500">
+            O relatório foi gerado com as duas assinaturas e a OS foi concluída automaticamente.
+          </p>
+          <Button type="button" className="w-full" onClick={aoFechar}>Fechar</Button>
         </div>
       )}
     </Modal>

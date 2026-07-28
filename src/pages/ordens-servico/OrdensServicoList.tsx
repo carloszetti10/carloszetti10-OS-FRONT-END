@@ -16,7 +16,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { StatusOsBadge } from "@/components/os/StatusOsBadge";
 import { OrdemServicoFormModal } from "@/components/os/OrdemServicoFormModal";
-import { STATUS_OS_LABEL } from "@/types/enums";
+import { StatusOs, STATUS_OS_LABEL } from "@/types/enums";
 import type { OrdemServico } from "@/types/ordemServico";
 import { formatarData } from "@/utils/formatters";
 import { useToastStore } from "@/stores/toastStore";
@@ -102,13 +102,16 @@ export default function OrdensServicoList() {
   }
 
   async function aoAbrirPdf(idOs: number) {
+    const novaAba = window.open("", "_blank");
     setBaixandoPdfId(idOs);
     try {
       const blob = await ordemServicoService.obterPdf(idOs);
       const url = URL.createObjectURL(blob);
-      window.open(url, "_blank");
+      if (novaAba) novaAba.location.href = url;
+      else window.open(url, "_blank");
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (erro) {
+      novaAba?.close();
       mostrarToast(extrairMensagemErro(erro), "erro");
     } finally {
       setBaixandoPdfId(null);

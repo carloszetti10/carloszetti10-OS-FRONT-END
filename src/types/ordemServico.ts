@@ -67,4 +67,5 @@ export interface OrdemServico {
   cogigoPdf: string;
   funcionarios: OsFuncionarioPayload[];
   possuiPdfAssinado: boolean; // novo campo (back) — true quando já existe um PDF assinado salvo
+  possuiPdfFotos: boolean; // true quando já existe um PDF de fotos do atendimento salvo
 }

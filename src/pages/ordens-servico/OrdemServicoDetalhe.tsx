@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Lock, FileText, User as UserIcon, Pencil, FileSignature, FileDown, PlayCircle, Ban } from "lucide-react";
+import { ArrowLeft, Lock, FileText, User as UserIcon, Pencil, FileSignature, FileDown, PlayCircle, Ban, Camera } from "lucide-react";
 import {
   useOrdemServico,
   useAtualizarRelatorio,
@@ -20,6 +20,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { StatusOsBadge } from "@/components/os/StatusOsBadge";
 import { GerenciarFuncionariosOs } from "@/components/os/GerenciarFuncionariosOs";
 import { GerarRelatorioModal } from "@/components/os/GerarRelatorioModal";
+import { GerarLinkFotosModal } from "@/components/os/GerarLinkFotosModal";
 import { EditarOrdemServicoModal } from "@/components/os/EditarOrdemServicoModal";
 import { StatusOs } from "@/types/enums";
 import { relatorioSchema, type RelatorioFormValues } from "@/schemas/ordemServicoSchema";
@@ -43,7 +44,9 @@ export default function OrdemServicoDetalhe() {
   const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false);
   const [editarAberto, setEditarAberto] = useState(false);
   const [gerarRelatorioAberto, setGerarRelatorioAberto] = useState(false);
+  const [gerarLinkFotosAberto, setGerarLinkFotosAberto] = useState(false);
   const [baixandoPdf, setBaixandoPdf] = useState(false);
+  const [baixandoPdfFotos, setBaixandoPdfFotos] = useState(false);
 
   const {
     register,
@@ -79,17 +82,39 @@ export default function OrdemServicoDetalhe() {
   }
 
   async function aoAbrirPdf() {
+    // Abre a aba JÁ, ainda dentro do gesto de clique do usuário — celular
+    // bloqueia window.open() se ele vier depois de um await (perde o
+    // "gesto do usuário"). Preenche o conteúdo dela só depois que o PDF chegar.
+    const novaAba = window.open("", "_blank");
     setBaixandoPdf(true);
     try {
       const blob = await ordemServicoService.obterPdf(os!.idOs);
       const url = URL.createObjectURL(blob);
-      window.open(url, "_blank");
-      // libera a memória do objeto depois de um tempo, sem pressa de fechar a aba
+      if (novaAba) novaAba.location.href = url;
+      else window.open(url, "_blank"); // navegador bloqueou mesmo assim — tenta de novo
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (erro) {
+      novaAba?.close();
       mostrarToast(extrairMensagemErro(erro), "erro");
     } finally {
       setBaixandoPdf(false);
+    }
+  }
+
+  async function aoAbrirPdfFotos() {
+    const novaAba = window.open("", "_blank");
+    setBaixandoPdfFotos(true);
+    try {
+      const blob = await ordemServicoService.obterPdfFotos(os!.idOs);
+      const url = URL.createObjectURL(blob);
+      if (novaAba) novaAba.location.href = url;
+      else window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (erro) {
+      novaAba?.close();
+      mostrarToast(extrairMensagemErro(erro), "erro");
+    } finally {
+      setBaixandoPdfFotos(false);
     }
   }
 
@@ -146,7 +171,17 @@ export default function OrdemServicoDetalhe() {
           </div>
           <p className="text-sm text-neutral-500">{os.nomeCliente} · {os.nomeTipoAtendimento}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {ehResponsavel && !osConcluida && (
+            <Button size="sm" variant="secondary" onClick={() => setGerarLinkFotosAberto(true)}>
+              <Camera className="h-4 w-4" /> Registrar Fotos
+            </Button>
+          )}
+          {os.possuiPdfFotos && (
+            <Button size="sm" variant="secondary" carregando={baixandoPdfFotos} onClick={aoAbrirPdfFotos}>
+              <Camera className="h-4 w-4" /> Ver Fotos
+            </Button>
+          )}
           {os.possuiPdfAssinado && (
             <Button size="sm" variant="secondary" carregando={baixandoPdf} onClick={aoAbrirPdf}>
               <FileDown className="h-4 w-4" /> Ver PDF
@@ -318,6 +353,12 @@ export default function OrdemServicoDetalhe() {
         aberto={editarAberto}
         aoFechar={() => setEditarAberto(false)}
         ordemServico={os}
+      />
+
+      <GerarLinkFotosModal
+        aberto={gerarLinkFotosAberto}
+        aoFechar={() => setGerarLinkFotosAberto(false)}
+        idOs={os.idOs}
       />
     </div>
   );

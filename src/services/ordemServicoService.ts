@@ -8,6 +8,7 @@ import type {
   OsFuncionarioPayload,
   OsFuncionarioDetalhe,
 } from "@/types/ordemServico";
+import type { TokenAssinatura } from "@/types/assinatura";
 
 export const ordemServicoService = {
   // GET /api/OrdemServico
@@ -69,6 +70,18 @@ export const ordemServicoService = {
   // Baixa o PDF assinado (binário) — GET /api/OrdemServico/{id}/pdf
   obterPdf: async (idOs: number): Promise<Blob> => {
     const { data } = await api.get(`/OrdemServico/${idOs}/pdf`, { responseType: "blob" });
+    return data as Blob;
+  },
+
+  // Gera o link/token de fotos do atendimento (segundo aparelho do consultor)
+  iniciarFotos: async (idOs: number): Promise<TokenAssinatura> => {
+    const { data } = await api.post<TokenAssinatura>(`/OrdemServico/${idOs}/fotos/iniciar`);
+    return data;
+  },
+
+  // Baixa o PDF de fotos do atendimento (binário) — GET /api/OrdemServico/{id}/pdf-fotos
+  obterPdfFotos: async (idOs: number): Promise<Blob> => {
+    const { data } = await api.get(`/OrdemServico/${idOs}/pdf-fotos`, { responseType: "blob" });
     return data as Blob;
   },
 };
