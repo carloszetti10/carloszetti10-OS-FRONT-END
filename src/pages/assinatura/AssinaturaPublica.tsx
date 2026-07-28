@@ -79,7 +79,8 @@ export default function AssinaturaPublica() {
     // Blob URL em vez de data: URI — o atributo "download" e URIs gigantes
     // não são confiáveis no Safari/Chrome mobile; Blob URL abre/baixa direito.
     const bytes = base64ParaUint8Array(pdfGeradoBase64);
-    const blob = new Blob([bytes], { type: "application/pdf" });
+    //const blob = new Blob([bytes], { type: "application/pdf" });
+    const blob = new Blob([bytes.buffer as ArrayBuffer], {type: "application/pdf",});
     const url = URL.createObjectURL(blob);
     window.open(url, "_blank");
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
