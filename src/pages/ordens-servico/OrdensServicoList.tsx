@@ -102,13 +102,16 @@ export default function OrdensServicoList() {
   }
 
   async function aoAbrirPdf(idOs: number) {
+    const novaAba = window.open("", "_blank");
     setBaixandoPdfId(idOs);
     try {
       const blob = await ordemServicoService.obterPdf(idOs);
       const url = URL.createObjectURL(blob);
-      window.open(url, "_blank");
+      if (novaAba) novaAba.location.href = url;
+      else window.open(url, "_blank");
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (erro) {
+      novaAba?.close();
       mostrarToast(extrairMensagemErro(erro), "erro");
     } finally {
       setBaixandoPdfId(null);

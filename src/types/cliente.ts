@@ -12,6 +12,7 @@ export interface Cliente {
   cep: string;
   uf?: string | null;
   cidade?: string | null;
+  bairro?: string | null;
   rua?: string | null;
   numero?: string | null;
   ativo: boolean;
@@ -26,6 +27,10 @@ export interface CriarClientePayload {
   email?: string;
   telefone?: string;
   cep: string;
+  uf?: string;
+  cidade?: string;
+  bairro?: string;
+  rua?: string;
   numero?: string;
 }
 
@@ -34,11 +39,12 @@ export interface AtualizarClientePayload extends CriarClientePayload {
   ativo: boolean;
 }
 
-// Resposta de GET /Clientes/consulta-cep/{cep}
+// Resposta de GET /api/Cep/consulta-cep/{cep} (CepController)
 export interface ViaCepResponse {
   cep: string;
-  logradouro: string;
-  bairro: string;
-  localidade: string;
   uf: string;
+  cidade: string;
+  rua: string;
+  bairro: string;
+  complemento?: string;
 }

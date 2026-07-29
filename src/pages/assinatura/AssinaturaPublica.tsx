@@ -7,7 +7,7 @@ import { SignaturePad, type SignaturePadHandle } from "@/components/ui/Signature
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { TelaCarregando } from "@/components/ui/Spinner";
-import { gerarPdfOs, uint8ArrayParaBase64 } from "@/utils/gerarPdfOs";
+import { gerarPdfOs, uint8ArrayParaBase64, base64ParaUint8Array } from "@/utils/gerarPdfOs";
 import { formatarDataHora } from "@/utils/formatters";
 import { extrairMensagemErro } from "@/utils/errorHandler";
 
@@ -76,10 +76,14 @@ export default function AssinaturaPublica() {
 
   function baixarPdf() {
     if (!pdfGeradoBase64) return;
-    const link = document.createElement("a");
-    link.href = `data:application/pdf;base64,${pdfGeradoBase64}`;
-    link.download = "ordem-de-servico-assinada.pdf";
-    link.click();
+    // Blob URL em vez de data: URI — o atributo "download" e URIs gigantes
+    // não são confiáveis no Safari/Chrome mobile; Blob URL abre/baixa direito.
+    const bytes = base64ParaUint8Array(pdfGeradoBase64);
+    //const blob = new Blob([bytes], { type: "application/pdf" });
+    const blob = new Blob([bytes.buffer as ArrayBuffer], {type: "application/pdf",});
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
   return (

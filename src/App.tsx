@@ -13,6 +13,7 @@ import GerenciarPermissoes from "@/pages/permissoes/GerenciarPermissoes";
 import Perfil from "@/pages/Perfil";
 import Configuracoes from "@/pages/Configuracoes";
 import AssinaturaPublica from "@/pages/assinatura/AssinaturaPublica";
+import RegistrarFotos from "@/pages/fotos/RegistrarFotos";
 import NotFound from "@/pages/NotFound";
 
 export default function App() {
@@ -21,8 +22,9 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
 
-        {/* Pública — o cliente abre pelo link/QR code, sem estar logado no sistema */}
+        {/* Públicas — abertas pelo link/QR code, sem estar logado no sistema */}
         <Route path="/assinar/:token" element={<AssinaturaPublica />} />
+        <Route path="/fotos/:token" element={<RegistrarFotos />} />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>

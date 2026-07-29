@@ -13,6 +13,10 @@ export const clienteSchema = z
     email: z.string().email("E-mail inválido.").optional().or(z.literal("")),
     telefone: z.string().optional().or(z.literal("")),
     cep: z.string().min(1, "O CEP é obrigatório."),
+    uf: z.string().max(2).optional().or(z.literal("")),
+    cidade: z.string().max(150).optional().or(z.literal("")),
+    bairro: z.string().max(150).optional().or(z.literal("")),
+    rua: z.string().max(150).optional().or(z.literal("")),
     numero: z.string().max(20).optional().or(z.literal("")),
     ativo: z.boolean().default(true),
   })

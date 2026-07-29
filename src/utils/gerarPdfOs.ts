@@ -108,8 +108,8 @@ export async function gerarPdfOs(dados: DadosPdfOs): Promise<Uint8Array> {
 
   let yGrid = y - 22;
   for (const [rotulo1, valor1, rotulo2, valor2] of linhasGrid) {
-    desenharCelula(page, fonte, fonteNegrito, MARGEM + 16, yGrid, rotulo1, valor1);
-    desenharCelula(page, fonte, fonteNegrito, MARGEM + 16 + colunaLargura + 16, yGrid, rotulo2, valor2);
+    desenharCelula(page,  fonteNegrito, MARGEM + 16, yGrid, rotulo1, valor1);
+    desenharCelula(page,  fonteNegrito, MARGEM + 16 + colunaLargura + 16, yGrid, rotulo2, valor2);
     yGrid -= alturaLinhaGrid;
   }
 
@@ -162,7 +162,7 @@ export async function gerarPdfOs(dados: DadosPdfOs): Promise<Uint8Array> {
 
 function desenharCelula(
   page: PDFPage,
-  _fonte: PDFFont,
+  //fonte: PDFFont,
   fonteNegrito: PDFFont,
   x: number,
   y: number,

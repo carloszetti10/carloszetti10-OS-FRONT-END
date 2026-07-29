@@ -41,7 +41,7 @@ export const clienteService = {
   },
 
   consultarCep: async (cep: string): Promise<ViaCepResponse> => {
-    const { data } = await api.get<ViaCepResponse>(`/Clientes/consulta-cep/${cep}`);
+    const { data } = await api.get<ViaCepResponse>(`/Cep/consulta-cep/${cep}`);
     return data;
   },
 };
