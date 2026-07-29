@@ -177,7 +177,10 @@ export default function OrdemServicoDetalhe() {
           <p className="text-sm text-neutral-500">{os.nomeCliente} · {os.nomeTipoAtendimento}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {ehResponsavel && !osTravada && (
+          {/* Registrar Fotos fica disponível mesmo com a OS concluída (o
+              atendimento já terminou, mas ainda pode ser preciso documentar
+              fotos depois); continua bloqueado só se a OS foi cancelada. */}
+          {ehResponsavel && !osCancelada && (
             <Button size="sm" variant="secondary" onClick={() => setGerarLinkFotosAberto(true)}>
               <Camera className="h-4 w-4" /> Registrar Fotos
             </Button>

@@ -1,7 +1,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import { AxiosError } from "axios";
-import { Camera, CheckCircle2, ShieldAlert, Trash2, Wrench, Upload } from "lucide-react";
+import { Camera, CheckCircle2, ShieldAlert, Trash2, Wrench, Upload, ImagePlus } from "lucide-react";
 import { useFotosPublica, useSalvarFotos } from "@/hooks/useFotos";
 import { Button } from "@/components/ui/Button";
 import { TelaCarregando } from "@/components/ui/Spinner";
@@ -19,7 +19,8 @@ export default function RegistrarFotos() {
   const { data: dados, isLoading, isError, error } = useFotosPublica(token);
   const { mutateAsync: salvar, isPending } = useSalvarFotos(token ?? "");
 
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputCameraRef = useRef<HTMLInputElement>(null);
+  const inputGaleriaRef = useRef<HTMLInputElement>(null);
   const [fotos, setFotos] = useState<string[]>([]);
   const [erroEnvio, setErroEnvio] = useState<string | null>(null);
   const [concluido, setConcluido] = useState(false);
@@ -111,8 +112,9 @@ export default function RegistrarFotos() {
                 </div>
               )}
 
+              {/* Input com capture="environment": abre direto a câmera do aparelho. */}
               <input
-                ref={inputRef}
+                ref={inputCameraRef}
                 type="file"
                 accept="image/*"
                 capture="environment"
@@ -120,9 +122,24 @@ export default function RegistrarFotos() {
                 className="hidden"
                 onChange={aoSelecionarArquivos}
               />
-              <Button type="button" variant="secondary" className="w-full" onClick={() => inputRef.current?.click()}>
-                <Camera className="h-4 w-4" /> {fotos.length > 0 ? "Tirar mais fotos" : "Tirar foto"}
-              </Button>
+              {/* Input sem capture: o navegador oferece a opção de escolher
+                  da galeria (além da câmera, em alguns aparelhos). */}
+              <input
+                ref={inputGaleriaRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={aoSelecionarArquivos}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <Button type="button" variant="secondary" className="w-full" onClick={() => inputCameraRef.current?.click()}>
+                  <Camera className="h-4 w-4" /> {fotos.length > 0 ? "Tirar mais fotos" : "Tirar foto"}
+                </Button>
+                <Button type="button" variant="secondary" className="w-full" onClick={() => inputGaleriaRef.current?.click()}>
+                  <ImagePlus className="h-4 w-4" /> Escolher da galeria
+                </Button>
+              </div>
 
               {erroEnvio && (
                 <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950">{erroEnvio}</p>
