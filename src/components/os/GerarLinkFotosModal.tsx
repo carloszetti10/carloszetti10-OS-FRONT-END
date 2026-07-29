@@ -34,8 +34,7 @@ export function GerarLinkFotosModal({ aberto, aoFechar, idOs }: GerarLinkFotosMo
       {!link ? (
         <div className="space-y-4">
           <p className="text-sm text-neutral-500">
-            Gera um link separado (válido por 2 horas) pra você abrir a câmera em outro aparelho — útil
-            quando o aparelho principal está sendo usado pra assinatura do cliente.
+            Gera um link separado (válido por 2 horas) pra você abrir a câmera em outro aparelho.
           </p>
           {error && (
             <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950">
