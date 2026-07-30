@@ -8,8 +8,10 @@ export const fotosService = {
     return data;
   },
 
-  // Público (sem login) — envio final do PDF de fotos.
+  // Público (sem login) — envio final do PDF de fotos. Payload pode ficar
+  // grande (várias fotos em base64) — timeout maior que o padrão da
+  // instância (15s) pra não falhar em rede mais lenta/instável.
   salvar: async (token: string, payload: SalvarFotosPayload): Promise<void> => {
-    await api.post(`/OrdemServico/fotos/${token}`, payload);
+    await api.post(`/OrdemServico/fotos/${token}`, payload, { timeout: 60_000 });
   },
 };

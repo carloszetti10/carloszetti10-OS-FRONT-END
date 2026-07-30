@@ -1,13 +1,50 @@
 import { useRef, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import { AxiosError } from "axios";
-import { Camera, CheckCircle2, ShieldAlert, Trash2, Wrench, Upload } from "lucide-react";
+import { Camera, CheckCircle2, ShieldAlert, Trash2, Upload, ImagePlus } from "lucide-react";
+import { LogoMark } from "@/assets/logo/LogoMark";
 import { useFotosPublica, useSalvarFotos } from "@/hooks/useFotos";
 import { Button } from "@/components/ui/Button";
 import { TelaCarregando } from "@/components/ui/Spinner";
 import { gerarPdfFotos } from "@/utils/gerarPdfFotos";
 import { uint8ArrayParaBase64 } from "@/utils/gerarPdfOs";
 import { extrairMensagemErro } from "@/utils/errorHandler";
+
+// Fotos de celular moderno saem com vários MB cada (às vezes 4000px+ de
+// largura) — isso deixava a geração do PDF lenta e o envio pro back grande
+// demais (dava timeout/erro em rede ruim). Aqui a gente redesenha a foto num
+// canvas menor e reexporta como JPEG comprimido antes de guardar/enviar.
+const LARGURA_MAXIMA_PX = 1600;
+const QUALIDADE_JPEG = 0.75;
+
+function redimensionarImagem(arquivo: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const leitor = new FileReader();
+    leitor.onerror = () => reject(leitor.error ?? new Error("Falha ao ler o arquivo."));
+    leitor.onload = () => {
+      const imagem = new Image();
+      imagem.onerror = () => reject(new Error("Não foi possível carregar a imagem."));
+      imagem.onload = () => {
+        const escala = Math.min(1, LARGURA_MAXIMA_PX / imagem.width);
+        const largura = Math.round(imagem.width * escala);
+        const altura = Math.round(imagem.height * escala);
+
+        const canvas = document.createElement("canvas");
+        canvas.width = largura;
+        canvas.height = altura;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Canvas não suportado neste navegador."));
+          return;
+        }
+        ctx.drawImage(imagem, 0, 0, largura, altura);
+        resolve(canvas.toDataURL("image/jpeg", QUALIDADE_JPEG));
+      };
+      imagem.src = leitor.result as string;
+    };
+    leitor.readAsDataURL(arquivo);
+  });
+}
 
 /**
  * Página PÚBLICA (fora do ProtectedRoute) — o consultor abre isso num
@@ -19,23 +56,35 @@ export default function RegistrarFotos() {
   const { data: dados, isLoading, isError, error } = useFotosPublica(token);
   const { mutateAsync: salvar, isPending } = useSalvarFotos(token ?? "");
 
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputCameraRef = useRef<HTMLInputElement>(null);
+  const inputGaleriaRef = useRef<HTMLInputElement>(null);
   const [fotos, setFotos] = useState<string[]>([]);
   const [erroEnvio, setErroEnvio] = useState<string | null>(null);
   const [concluido, setConcluido] = useState(false);
+  // Enquanto redimensiona/comprime as fotos escolhidas (ver redimensionarImagem
+  // abaixo) — evita clicar em "Enviar" antes das fotos ficarem prontas.
+  const [processandoFotos, setProcessandoFotos] = useState(false);
 
-  function aoSelecionarArquivos(e: React.ChangeEvent<HTMLInputElement>) {
+  async function aoSelecionarArquivos(e: React.ChangeEvent<HTMLInputElement>) {
     const arquivos = Array.from(e.target.files ?? []);
-    arquivos.forEach((arquivo) => {
-      const leitor = new FileReader();
-      leitor.onload = () => {
-        if (typeof leitor.result === "string") {
-          setFotos((atual) => [...atual, leitor.result as string]);
-        }
-      };
-      leitor.readAsDataURL(arquivo);
-    });
     e.target.value = ""; // permite selecionar a mesma foto de novo depois de remover
+    if (arquivos.length === 0) return;
+
+    setProcessandoFotos(true);
+    try {
+      for (const arquivo of arquivos) {
+        try {
+          const dataUrl = await redimensionarImagem(arquivo);
+          setFotos((atual) => [...atual, dataUrl]);
+        } catch {
+          // essa foto específica não pôde ser processada (arquivo corrompido,
+          // formato inesperado etc.) — não trava as demais
+          setErroEnvio("Uma das fotos não pôde ser processada e foi ignorada.");
+        }
+      }
+    } finally {
+      setProcessandoFotos(false);
+    }
   }
 
   function removerFoto(indice: number) {
@@ -70,9 +119,7 @@ export default function RegistrarFotos() {
     <div className="flex min-h-screen items-center justify-center bg-surface-subtle px-4 py-10 dark:bg-surface-dark">
       <div className="w-full max-w-md">
         <div className="mb-6 flex flex-col items-center gap-2 text-center">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-soft">
-            <Wrench className="h-5 w-5" />
-          </div>
+          <LogoMark className="h-11 w-11" />
           <h1 className="font-display text-xl font-bold">Fotos do Atendimento</h1>
         </div>
 
@@ -111,8 +158,9 @@ export default function RegistrarFotos() {
                 </div>
               )}
 
+              {/* Input com capture="environment": abre direto a câmera do aparelho. */}
               <input
-                ref={inputRef}
+                ref={inputCameraRef}
                 type="file"
                 accept="image/*"
                 capture="environment"
@@ -120,15 +168,52 @@ export default function RegistrarFotos() {
                 className="hidden"
                 onChange={aoSelecionarArquivos}
               />
-              <Button type="button" variant="secondary" className="w-full" onClick={() => inputRef.current?.click()}>
-                <Camera className="h-4 w-4" /> {fotos.length > 0 ? "Tirar mais fotos" : "Tirar foto"}
-              </Button>
+              {/* Input sem capture: o navegador oferece a opção de escolher
+                  da galeria (além da câmera, em alguns aparelhos). */}
+              <input
+                ref={inputGaleriaRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={aoSelecionarArquivos}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full"
+                  disabled={processandoFotos}
+                  onClick={() => inputCameraRef.current?.click()}
+                >
+                  <Camera className="h-4 w-4" /> {fotos.length > 0 ? "Tirar mais fotos" : "Tirar foto"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full"
+                  disabled={processandoFotos}
+                  onClick={() => inputGaleriaRef.current?.click()}
+                >
+                  <ImagePlus className="h-4 w-4" /> Escolher da galeria
+                </Button>
+              </div>
+
+              {processandoFotos && (
+                <p className="text-center text-xs text-neutral-500">Otimizando foto(s)…</p>
+              )}
 
               {erroEnvio && (
                 <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950">{erroEnvio}</p>
               )}
 
-              <Button type="button" className="w-full" carregando={isPending} onClick={aoEnviar} disabled={fotos.length === 0}>
+              <Button
+                type="button"
+                className="w-full"
+                carregando={isPending}
+                onClick={aoEnviar}
+                disabled={fotos.length === 0 || processandoFotos}
+              >
                 <Upload className="h-4 w-4" /> Enviar fotos ({fotos.length})
               </Button>
             </div>
