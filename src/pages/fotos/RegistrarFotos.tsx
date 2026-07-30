@@ -1,7 +1,8 @@
 import { useRef, useState, type ReactNode } from "react";
 import { useParams } from "react-router-dom";
 import { AxiosError } from "axios";
-import { Camera, CheckCircle2, ShieldAlert, Trash2, Wrench, Upload, ImagePlus } from "lucide-react";
+import { Camera, CheckCircle2, ShieldAlert, Trash2, Upload, ImagePlus } from "lucide-react";
+import { LogoMark } from "@/assets/logo/LogoMark";
 import { useFotosPublica, useSalvarFotos } from "@/hooks/useFotos";
 import { Button } from "@/components/ui/Button";
 import { TelaCarregando } from "@/components/ui/Spinner";
@@ -118,9 +119,7 @@ export default function RegistrarFotos() {
     <div className="flex min-h-screen items-center justify-center bg-surface-subtle px-4 py-10 dark:bg-surface-dark">
       <div className="w-full max-w-md">
         <div className="mb-6 flex flex-col items-center gap-2 text-center">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-soft">
-            <Wrench className="h-5 w-5" />
-          </div>
+          <LogoMark className="h-11 w-11" />
           <h1 className="font-display text-xl font-bold">Fotos do Atendimento</h1>
         </div>
 

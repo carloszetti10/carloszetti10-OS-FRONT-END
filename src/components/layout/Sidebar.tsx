@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { usePodeGerenciarPermissoes } from "@/hooks/usePermissoes";
+import { LogoMark } from "@/assets/logo/LogoMark";
 
 interface SidebarProps {
   recolhida: boolean;
@@ -41,9 +42,7 @@ export function Sidebar({ recolhida, aoAlternar }: SidebarProps) {
       )}
     >
       <div className="flex h-16 items-center gap-2 border-b border-neutral-100 px-4 dark:border-neutral-800">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 font-display font-bold text-white">
-          N
-        </div>
+        <LogoMark className="h-8 w-8 shrink-0" />
         {!recolhida && <span className="font-display text-lg font-bold tracking-tight">NorteSys</span>}
       </div>
 
