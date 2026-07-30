@@ -128,7 +128,7 @@ export default function AssinaturaPublica() {
 
               <Input label="Seu nome completo" value={nome} onChange={(e) => setNome(e.target.value)} />
               <Input
-                label="CPF/CNPJ (opcional)"
+                label="CPF/CNPJ"
                 value={documento}
                 onChange={(e) => setDocumento(e.target.value)}
               />

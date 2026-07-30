@@ -58,6 +58,8 @@ export function extrairMensagemErro(error: unknown): string {
       return "O recurso solicitado não foi encontrado.";
     case 409:
       return "Já existe um registro em conflito com essas informações.";
+    case 413:
+      return "As fotos enviadas juntas ficaram grandes demais para o servidor. Tente enviar menos fotos de uma vez.";
     case 500:
       return "Ocorreu um erro interno no servidor. Tente novamente em instantes.";
     default:
