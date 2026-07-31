@@ -43,7 +43,7 @@ export function Sidebar({ recolhida, aoAlternar }: SidebarProps) {
     >
       <div className="flex h-16 items-center gap-2 border-b border-neutral-100 px-4 dark:border-neutral-800">
         <LogoMark className="h-8 w-8 shrink-0" />
-        {!recolhida && <span className="font-display text-lg font-bold tracking-tight">NorteSys</span>}
+        {!recolhida && <span className="font-display text-lg font-bold uppercase tracking-tight">NorteSys</span>}
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-3 scrollbar-thin">
