@@ -4,8 +4,6 @@ import { Eraser, Maximize2, Minimize2, X } from "lucide-react";
 import { Button } from "./Button";
 
 export interface SignaturePadHandle {
-  /** Devolve a assinatura como base64 PNG (sem o prefixo "data:image/png;base64,"),
-   *  ou null se nada foi desenhado ainda. */
   obterBase64: () => string | null;
   limpar: () => void;
   estaVazio: () => boolean;
@@ -15,55 +13,68 @@ interface SignaturePadProps {
   altura?: number;
 }
 
-/**
- * Campo de assinatura por toque/mouse/caneta (canvas), funciona em
- * celular, tablet e computador — não depende de nenhuma lib externa.
- * Usa Pointer Events, que unifica mouse/touch/caneta numa API só.
- *
- * Tem um modo "expandido" (tela cheia) pra facilitar assinar num celular
- * ou tablet: o campo normal é pequeno pra caber no formulário, mas na
- * hora de assinar de verdade é bem mais prático ter mais espaço.
- */
 export const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(
   ({ altura = 180 }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const desenhandoRef = useRef(false);
     const temTracoRef = useRef(false);
+    
+    const imagemBase64Ref = useRef<string | null>(null);
+    const tamanhoAnteriorRef = useRef({ width: 0, height: 0 });
+
     const [temTraco, setTemTraco] = useState(false);
     const [expandido, setExpandido] = useState(false);
 
-    // Ajusta a resolução do canvas pro devicePixelRatio (fica nítido em telas
-    // retina) e preserva o traço já desenhado sempre que o canvas muda de
-    // tamanho — tanto por resize da janela quanto por entrar/sair do modo
-    // expandido (que troca o tamanho do canvas sem disparar "resize" da window).
     useEffect(() => {
       const canvas = canvasRef.current;
       if (!canvas) return;
+
       const ajustarTamanho = () => {
-        const dpr = window.devicePixelRatio || 1;
-        const rect = canvas.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) return;
-        const desenhoAnterior = temTracoRef.current ? canvas.toDataURL("image/png") : null;
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-        ctx.scale(dpr, dpr);
-        ctx.lineWidth = 2.2;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.strokeStyle = "#0f1713";
-        if (desenhoAnterior) {
-          const img = new Image();
-          img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
-          img.src = desenhoAnterior;
-        }
+        requestAnimationFrame(() => {
+          const dpr = window.devicePixelRatio || 1;
+          const rect = canvas.getBoundingClientRect();
+
+          if (rect.width === 0 || rect.height === 0) return;
+
+          if (
+            rect.width === tamanhoAnteriorRef.current.width &&
+            rect.height === tamanhoAnteriorRef.current.height
+          ) {
+            return;
+          }
+
+          tamanhoAnteriorRef.current = { width: rect.width, height: rect.height };
+
+          canvas.width = rect.width * dpr;
+          canvas.height = rect.height * dpr;
+
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return;
+
+          ctx.scale(dpr, dpr);
+          ctx.lineWidth = 2.2;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.strokeStyle = "#0f1713";
+
+          // Se já existe uma imagem salva, desenha ela de volta no novo canvas
+          if (imagemBase64Ref.current) {
+            const img = new Image();
+            img.onload = () => {
+              ctx.drawImage(img, 0, 0, rect.width, rect.height);
+            };
+            img.src = imagemBase64Ref.current;
+          }
+        });
       };
+
       ajustarTamanho();
+
       const observer = new ResizeObserver(ajustarTamanho);
       observer.observe(canvas);
+
       return () => observer.disconnect();
-    }, []);
+    }, [expandido]);
 
     function posicao(e: React.PointerEvent<HTMLCanvasElement>) {
       const rect = canvasRef.current!.getBoundingClientRect();
@@ -87,6 +98,7 @@ export const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(
       const { x, y } = posicao(e);
       ctx.lineTo(x, y);
       ctx.stroke();
+
       if (!temTracoRef.current) {
         temTracoRef.current = true;
         setTemTraco(true);
@@ -94,22 +106,33 @@ export const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(
     }
 
     function aoSoltar() {
+      if (!desenhandoRef.current) return;
       desenhandoRef.current = false;
+
+      if (canvasRef.current && temTracoRef.current) {
+        imagemBase64Ref.current = canvasRef.current.toDataURL("image/png");
+      }
     }
 
     function limpar() {
       const canvas = canvasRef.current;
       const ctx = canvas?.getContext("2d");
       if (!canvas || !ctx) return;
+      
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       temTracoRef.current = false;
+      imagemBase64Ref.current = null;
+      tamanhoAnteriorRef.current = { width: 0, height: 0 };
       setTemTraco(false);
     }
 
     useImperativeHandle(ref, () => ({
       obterBase64: () => {
-        if (!temTracoRef.current || !canvasRef.current) return null;
-        const dataUrl = canvasRef.current.toDataURL("image/png");
+        if (!temTracoRef.current) return null;
+
+        const dataUrl = imagemBase64Ref.current || canvasRef.current?.toDataURL("image/png");
+        if (!dataUrl) return null;
+
         return dataUrl.replace(/^data:image\/png;base64,/, "");
       },
       limpar,
@@ -127,8 +150,6 @@ export const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(
       />
     );
 
-    // Modo expandido: assinatura em tela cheia (melhor pra assinar com o
-    // dedo num celular ou tablet, sem o campo pequeno atrapalhar o traço).
     if (expandido) {
       return createPortal(
         <div className="fixed inset-0 z-50 flex flex-col bg-white p-4 dark:bg-neutral-950">
@@ -193,4 +214,5 @@ export const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(
     );
   }
 );
+
 SignaturePad.displayName = "SignaturePad";
