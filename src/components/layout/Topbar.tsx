@@ -5,6 +5,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useThemeStore } from "@/stores/themeStore";
 import { Avatar } from "@/components/ui/Avatar";
 import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { queryClient } from "@/lib/queryClient";
 
 interface TopbarProps {
   aoAbrirMenuMobile: () => void;
@@ -69,6 +70,11 @@ export function Topbar({ aoAbrirMenuMobile, itensBreadcrumb }: TopbarProps) {
                 <button
                   onClick={() => {
                     logout();
+                    // Remove do cache em memória qualquer dado (OS, clientes,
+                    // fotos etc.) que tenha sido buscado pelo usuário que
+                    // acabou de sair — evita vazamento entre sessões no
+                    // mesmo dispositivo/navegador.
+                    queryClient.clear();
                     navigate("/login", { replace: true });
                   }}
                   className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-950"

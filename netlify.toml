@@ -1,3 +1,28 @@
 [build]
   command = "npm run build"
   publish = "dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Impede que o site seja embutido em iframe de outra origem (clickjacking)
+    X-Frame-Options = "DENY"
+    # Impede o navegador de "adivinhar" o content-type de um arquivo
+    X-Content-Type-Options = "nosniff"
+    # So envia a origem (nao a URL completa) em navegacoes cross-site
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    # Desliga APIs sensiveis do navegador que o app nao usa
+    Permissions-Policy = "geolocation=(), microphone=(), payment=(), usb=()"
+    # Forca HTTPS em todas as chamadas subsequentes (1 ano, incluindo subdominios)
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    # Content-Security-Policy: restringe de onde o app pode carregar/executar
+    # codigo, imagens e chamadas de rede. connect-src usa https: (em vez de
+    # travar num dominio fixo) porque o back roda atras de um tunel do
+    # Cloudflare cujo endereco muda; ajuste para o dominio final da API
+    # assim que ele for fixo, restringindo ainda mais esta diretiva.
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"

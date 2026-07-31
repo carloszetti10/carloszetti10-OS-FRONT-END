@@ -1,6 +1,5 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
-import { LOGO_NORTESYS_BASE64 } from "@/assets/logoNortesysBase64";
-import { base64ParaUint8Array } from "./gerarPdfOs";
+import { base64ParaUint8Array, carregarLogoPdf } from "./gerarPdfOs";
 
 export interface FotoAtendimento {
   /** data URL completa (ex.: "data:image/jpeg;base64,...") — vem direto do <input type="file"> */
@@ -37,7 +36,7 @@ export async function gerarPdfFotos(dados: DadosPdfFotos): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const fonte = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fonteNegrito = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const logo = await pdfDoc.embedPng(base64ParaUint8Array(LOGO_NORTESYS_BASE64));
+  const logo = await pdfDoc.embedPng(await carregarLogoPdf());
 
   const totalPaginas = Math.max(1, Math.ceil(dados.fotos.length / FOTOS_POR_PAGINA));
 

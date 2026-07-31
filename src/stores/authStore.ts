@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 import type { AuthResponse, JwtPayload } from "@/types/auth";
 
 interface AuthState {
@@ -14,8 +14,22 @@ interface AuthState {
 
 /**
  * Estado global de autenticação (Zustand, sem Redux por pedido do projeto).
- * Persistido no localStorage pra sobreviver a um F5 — o "persist" grava
- * automaticamente sob a chave "os-nortesys-auth".
+ *
+ * SEGURANÇA — token em sessionStorage, não em localStorage:
+ * Ambos são acessíveis a qualquer script rodando na página (inclusive
+ * código injetado via XSS), então nenhum dos dois é imune a esse ataque —
+ * a mitigação definitiva pra isso é a API devolver o JWT num cookie
+ * httpOnly + Secure + SameSite, o que depende de mudança no back-end e
+ * está fora do escopo desta correção pontual.
+ *
+ * Dito isso, sessionStorage é bem mais seguro que localStorage na prática:
+ *  - É isolado por ABA: uma aba não consegue ler o token de outra, e um
+ *    site diferente aberto no mesmo navegador nunca tem acesso a ele.
+ *  - Expira sozinho ao fechar a aba/navegador — não fica gravado em disco
+ *    indefinidamente esperando alguém (malware, outra pessoa no mesmo PC,
+ *    um backup do perfil do navegador) encontrar semanas depois.
+ *  - Mantém o F5 funcionando normalmente, que é o comportamento que o
+ *    fluxo de assinatura/PDF da OS depende.
  */
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -43,7 +57,10 @@ export const useAuthStore = create<AuthState>()(
         }
       },
     }),
-    { name: "os-nortesys-auth" }
+    {
+      name: "os-nortesys-auth",
+      storage: createJSONStorage(() => sessionStorage),
+    }
   )
 );
 
