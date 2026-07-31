@@ -16,7 +16,7 @@ export function LogoFull({ className, comSubtitulo = true }: LogoFullProps) {
     <div className={className ? `flex items-center gap-3 ${className}` : "flex items-center gap-3"}>
       <LogoMark className="h-12 w-12 shrink-0" />
       <div className="text-left">
-        <span className="block font-display text-2xl font-bold leading-tight tracking-tight text-neutral-900 dark:text-white">
+        <span className="block font-display text-2xl font-bold uppercase leading-tight tracking-tight text-neutral-900 dark:text-white">
           NorteSys
         </span>
         {comSubtitulo && (

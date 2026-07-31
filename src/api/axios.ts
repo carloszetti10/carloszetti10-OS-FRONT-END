@@ -1,5 +1,6 @@
 import axios from "axios";
 import { useAuthStore } from "@/stores/authStore";
+import { queryClient } from "@/lib/queryClient";
 
 /**
  * Instância única do Axios usada por todos os Services.
@@ -9,6 +10,10 @@ import { useAuthStore } from "@/stores/authStore";
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 15000,
+  // Autenticação é 100% via header Authorization (Bearer). Nunca enviar
+  // cookies automaticamente — evita qualquer superfície de CSRF e deixa
+  // explícito que a API não deve depender de sessão via cookie.
+  withCredentials: false,
 });
 
 // Interceptor de REQUEST: injeta o Bearer Token automaticamente em toda
@@ -30,6 +35,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       useAuthStore.getState().logout();
+      queryClient.clear();
       if (window.location.pathname !== "/login") {
         window.location.href = "/login";
       }

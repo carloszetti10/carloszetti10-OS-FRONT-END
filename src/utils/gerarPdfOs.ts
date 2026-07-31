@@ -1,5 +1,4 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
-import { LOGO_NORTESYS_BASE64 } from "@/assets/logoNortesysBase64";
 
 export interface DadosPdfOs {
   idOs: number;
@@ -48,7 +47,7 @@ export async function gerarPdfOs(dados: DadosPdfOs): Promise<Uint8Array> {
   let y = ALTURA_PAGINA - 44;
 
   // ===== Cabeçalho: logo + título + código da OS =====
-  const logo = await pdfDoc.embedPng(base64ParaUint8Array(LOGO_NORTESYS_BASE64));
+  const logo = await pdfDoc.embedPng(await carregarLogoPdf());
   const logoLargura = 108;
   const logoAltura = (logo.height / logo.width) * logoLargura;
   page.drawImage(logo, { x: MARGEM, y: y - logoAltura + 6, width: logoLargura, height: logoAltura });
@@ -299,6 +298,18 @@ export function uint8ArrayParaBase64(bytes: Uint8Array): string {
     binario += String.fromCharCode(...bytes.subarray(i, i + tamanhoBloco));
   }
   return btoa(binario);
+}
+
+/**
+ * Busca o PNG da logo usada no cabeçalho dos PDFs (`public/logo-pdf.png`).
+ * É a logomarca antiga da NorteSys — mantida propositalmente nos documentos
+ * gerados, mesmo com a marca do site já atualizada para a nova logo.
+ * Carregado como arquivo estático (não em base64) para não inflar o bundle JS.
+ */
+export async function carregarLogoPdf(): Promise<Uint8Array> {
+  const resposta = await fetch("/logo-pdf.png");
+  const bytes = await resposta.arrayBuffer();
+  return new Uint8Array(bytes);
 }
 
 /** base64 -> Uint8Array (aceita string com ou sem o prefixo "data:image/...;base64,") */
