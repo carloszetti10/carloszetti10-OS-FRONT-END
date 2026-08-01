@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Plus, Search, Eye, Trash2, ArrowUpDown, FileDown } from "lucide-react";
-import { useOrdensServico } from "@/hooks/useOrdensServico";
+import { Plus, Search, Eye, Trash2, FileDown, SlidersHorizontal, X } from "lucide-react";
+import { useOrdensServicoPaginado } from "@/hooks/useOrdensServico";
 import { useClientes } from "@/hooks/useClientes";
-import { useFuncionarios } from "@/hooks/useFuncionarios";
+import { useTiposAtendimento } from "@/hooks/useTiposAtendimento";
+import { useDebounce } from "@/hooks/useDebounce";
 import { ordemServicoService } from "@/services/ordemServicoService";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
@@ -16,29 +17,32 @@ import { Pagination } from "@/components/ui/Pagination";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { StatusOsBadge } from "@/components/os/StatusOsBadge";
 import { OrdemServicoFormModal } from "@/components/os/OrdemServicoFormModal";
-import { STATUS_OS_LABEL } from "@/types/enums";
-import type { OrdemServico } from "@/types/ordemServico";
+import { STATUS_OS_LABEL, type StatusOs } from "@/types/enums";
+import type { OrdemServico, FiltroOrdensServico } from "@/types/ordemServico";
 import { formatarData } from "@/utils/formatters";
 import { useToastStore } from "@/stores/toastStore";
 import { extrairMensagemErro } from "@/utils/errorHandler";
 
-type CampoOrdenacao = "idOs" | "tituloOs" | "nomeCliente" | "status" | "prazo";
-const ITENS_POR_PAGINA = 10;
+const TAMANHO_PAGINA = 10;
 
 export default function OrdensServicoList() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { data: ordens, isLoading } = useOrdensServico();
   const { data: clientes } = useClientes({ somenteAtivos: true });
-  const { data: funcionarios } = useFuncionarios({ somenteAtivos: true });
+  const { data: tiposAtendimento } = useTiposAtendimento();
   const queryClient = useQueryClient();
   const mostrarToast = useToastStore((s) => s.mostrar);
 
   const [busca, setBusca] = useState("");
+  const buscaComAtraso = useDebounce(busca, 400); // evita buscar no servidor a cada letra digitada
   const [filtroStatus, setFiltroStatus] = useState("");
   const [filtroCliente, setFiltroCliente] = useState("");
-  const [filtroResponsavel, setFiltroResponsavel] = useState("");
-  const [ordenarPor, setOrdenarPor] = useState<CampoOrdenacao>("prazo");
-  const [ordemAsc, setOrdemAsc] = useState(true);
+  const [filtroTipoAtendimento, setFiltroTipoAtendimento] = useState("");
+  // Datas em formato "yyyy-mm-dd" (vem direto do <input type="date">).
+  const [filtroInicioDe, setFiltroInicioDe] = useState("");
+  const [filtroInicioAte, setFiltroInicioAte] = useState("");
+  const [filtroTerminoDe, setFiltroTerminoDe] = useState("");
+  const [filtroTerminoAte, setFiltroTerminoAte] = useState("");
+  const [mostrarMaisFiltros, setMostrarMaisFiltros] = useState(false);
   const [pagina, setPagina] = useState(1);
   const [osParaExcluir, setOsParaExcluir] = useState<OrdemServico | null>(null);
   const [excluindo, setExcluindo] = useState(false);
@@ -48,42 +52,53 @@ export default function OrdensServicoList() {
   const abrirModal = () => setSearchParams({ nova: "1" });
   const fecharModal = () => setSearchParams({});
 
-  const listaFiltrada = useMemo(() => {
-    let lista = ordens ?? [];
+  // Filtro/paginação mandados pro back (GET /OrdemServico/paginado) — a
+  // filtragem, ordenação e o "só vê OS vinculada" agora são feitos lá,
+  // não mais aqui no front.
+  const filtro: FiltroOrdensServico = useMemo(
+    () => ({
+      pagina,
+      tamanhoPagina: TAMANHO_PAGINA,
+      status: filtroStatus ? (Number(filtroStatus) as StatusOs) : undefined,
+      idCliente: filtroCliente ? Number(filtroCliente) : undefined,
+      idTipoAtendimento: filtroTipoAtendimento ? Number(filtroTipoAtendimento) : undefined,
+      dataInicioDe: filtroInicioDe || undefined,
+      dataInicioAte: filtroInicioAte || undefined,
+      dataFimDe: filtroTerminoDe || undefined,
+      dataFimAte: filtroTerminoAte || undefined,
+      busca: buscaComAtraso.trim() || undefined,
+    }),
+    [
+      pagina,
+      filtroStatus,
+      filtroCliente,
+      filtroTipoAtendimento,
+      filtroInicioDe,
+      filtroInicioAte,
+      filtroTerminoDe,
+      filtroTerminoAte,
+      buscaComAtraso,
+    ]
+  );
 
-    if (busca.trim()) {
-      const termo = busca.trim().toLowerCase();
-      lista = lista.filter(
-        (o) => o.tituloOs.toLowerCase().includes(termo) || o.nomeCliente.toLowerCase().includes(termo)
-      );
-    }
-    if (filtroStatus) lista = lista.filter((o) => o.status === Number(filtroStatus));
-    if (filtroCliente) lista = lista.filter((o) => o.idCliente === Number(filtroCliente));
-    if (filtroResponsavel) {
-      lista = lista.filter((o) =>
-        o.funcionarios.some((f) => f.responsavel && f.idFuncionario === Number(filtroResponsavel))
-      );
-    }
+  const { data: resultado, isLoading, isFetching } = useOrdensServicoPaginado(filtro);
+  const ordens = resultado?.itens ?? [];
+  const totalPaginas = resultado ? Math.max(1, Math.ceil(resultado.totalRegistros / resultado.tamanhoPagina)) : 1;
 
-    lista = [...lista].sort((a, b) => {
-      const va = a[ordenarPor] ?? "";
-      const vb = b[ordenarPor] ?? "";
-      const cmp = String(va).localeCompare(String(vb), "pt-BR", { numeric: true });
-      return ordemAsc ? cmp : -cmp;
-    });
+  const temFiltroAvancadoAtivo =
+    !!filtroTipoAtendimento || !!filtroInicioDe || !!filtroInicioAte || !!filtroTerminoDe || !!filtroTerminoAte;
+  const temAlgumFiltroAtivo = !!busca || !!filtroStatus || !!filtroCliente || temFiltroAvancadoAtivo;
 
-    return lista;
-  }, [ordens, busca, filtroStatus, filtroCliente, filtroResponsavel, ordenarPor, ordemAsc]);
-
-  const totalPaginas = Math.max(1, Math.ceil(listaFiltrada.length / ITENS_POR_PAGINA));
-  const listaPagina = listaFiltrada.slice((pagina - 1) * ITENS_POR_PAGINA, pagina * ITENS_POR_PAGINA);
-
-  function alternarOrdenacao(campo: CampoOrdenacao) {
-    if (ordenarPor === campo) setOrdemAsc((v) => !v);
-    else {
-      setOrdenarPor(campo);
-      setOrdemAsc(true);
-    }
+  function limparFiltros() {
+    setBusca("");
+    setFiltroStatus("");
+    setFiltroCliente("");
+    setFiltroTipoAtendimento("");
+    setFiltroInicioDe("");
+    setFiltroInicioAte("");
+    setFiltroTerminoDe("");
+    setFiltroTerminoAte("");
+    setPagina(1);
   }
 
   async function confirmarExclusao() {
@@ -92,6 +107,7 @@ export default function OrdensServicoList() {
     try {
       await ordemServicoService.remover(osParaExcluir.idOs);
       queryClient.invalidateQueries({ queryKey: ["ordens-servico"] });
+      queryClient.invalidateQueries({ queryKey: ["ordens-servico-paginado"] });
       mostrarToast("Ordem de serviço excluída.", "sucesso");
       setOsParaExcluir(null);
     } catch (erro) {
@@ -161,37 +177,97 @@ export default function OrdensServicoList() {
             ))}
           </Select>
 
-          <Select value={filtroResponsavel} onChange={(e) => { setFiltroResponsavel(e.target.value); setPagina(1); }}>
-            <option value="">Todos os responsáveis</option>
-            {funcionarios?.map((f) => (
-              <option key={f.id} value={f.id}>{f.nome}</option>
-            ))}
-          </Select>
+          {/*
+            TODO(back): filtro por Responsável removido daqui — o endpoint
+            GET /OrdemServico/paginado ainda não aceita um parâmetro de
+            funcionário responsável. Antes disso filtrava em memória no
+            front; pra voltar a ter esse filtro, o back precisa ganhar um
+            parâmetro tipo IdFuncionarioResponsavel no FiltroOrdemServicoDto.
+          */}
         </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setMostrarMaisFiltros((v) => !v)}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            {mostrarMaisFiltros ? "Menos filtros" : "Mais filtros"}
+            {temFiltroAvancadoAtivo && (
+              <span className="ml-0.5 h-1.5 w-1.5 rounded-full bg-brand-600" />
+            )}
+          </Button>
+          {temAlgumFiltroAtivo && (
+            <Button type="button" variant="ghost" size="sm" onClick={limparFiltros}>
+              <X className="h-4 w-4" /> Limpar filtros
+            </Button>
+          )}
+        </div>
+
+        {mostrarMaisFiltros && (
+          <div className="grid grid-cols-1 gap-3 rounded-xl bg-neutral-50 p-3 sm:grid-cols-2 lg:grid-cols-5 dark:bg-neutral-800/50">
+            <Select
+              value={filtroTipoAtendimento}
+              onChange={(e) => { setFiltroTipoAtendimento(e.target.value); setPagina(1); }}
+            >
+              <option value="">Todos os tipos de atendimento</option>
+              {tiposAtendimento?.map((t) => (
+                <option key={t.id} value={t.id}>{t.descricao}</option>
+              ))}
+            </Select>
+
+            <Input
+              type="date"
+              label="Início de"
+              value={filtroInicioDe}
+              onChange={(e) => { setFiltroInicioDe(e.target.value); setPagina(1); }}
+            />
+            <Input
+              type="date"
+              label="Início até"
+              value={filtroInicioAte}
+              onChange={(e) => { setFiltroInicioAte(e.target.value); setPagina(1); }}
+            />
+            <Input
+              type="date"
+              label="Término de"
+              value={filtroTerminoDe}
+              onChange={(e) => { setFiltroTerminoDe(e.target.value); setPagina(1); }}
+            />
+            <Input
+              type="date"
+              label="Término até"
+              value={filtroTerminoAte}
+              onChange={(e) => { setFiltroTerminoAte(e.target.value); setPagina(1); }}
+            />
+          </div>
+        )}
 
         {isLoading ? (
           <SkeletonTabela colunas={6} />
-        ) : listaPagina.length === 0 ? (
+        ) : ordens.length === 0 ? (
           <EmptyState
             titulo="Nenhuma OS encontrada"
             descricao="Ajuste os filtros ou crie uma nova ordem de serviço."
             acao={<Button onClick={abrirModal} size="sm"><Plus className="h-4 w-4" /> Nova OS</Button>}
           />
         ) : (
-          <div className="overflow-x-auto">
+          <div className={`overflow-x-auto transition-opacity ${isFetching ? "opacity-60" : ""}`}>
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-neutral-100 text-xs uppercase text-neutral-400 dark:border-neutral-800">
-                  <CabecalhoOrdenavel label="ID" campo="idOs" atual={ordenarPor} asc={ordemAsc} aoClicar={alternarOrdenacao} />
-                  <CabecalhoOrdenavel label="Título" campo="tituloOs" atual={ordenarPor} asc={ordemAsc} aoClicar={alternarOrdenacao} />
-                  <CabecalhoOrdenavel label="Cliente" campo="nomeCliente" atual={ordenarPor} asc={ordemAsc} aoClicar={alternarOrdenacao} />
-                  <CabecalhoOrdenavel label="Status" campo="status" atual={ordenarPor} asc={ordemAsc} aoClicar={alternarOrdenacao} />
-                  <CabecalhoOrdenavel label="Prazo" campo="prazo" atual={ordenarPor} asc={ordemAsc} aoClicar={alternarOrdenacao} />
+                  <th className="py-2.5 pr-2">ID</th>
+                  <th className="py-2.5 pr-2">Título</th>
+                  <th className="py-2.5 pr-2">Cliente</th>
+                  <th className="py-2.5 pr-2">Status</th>
+                  <th className="py-2.5 pr-2">Prazo</th>
                   <th className="py-2.5 pr-2 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {listaPagina.map((os) => (
+                {ordens.map((os) => (
                   <tr key={os.idOs} className="border-b border-neutral-50 last:border-0 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-800/50">
                     <td className="py-3 pr-2 text-neutral-400">#{os.idOs}</td>
                     <td className="py-3 pr-2 font-medium">
@@ -251,28 +327,5 @@ export default function OrdensServicoList() {
         aoCancelar={() => setOsParaExcluir(null)}
       />
     </div>
-  );
-}
-
-function CabecalhoOrdenavel({
-  label,
-  campo,
-  atual,
-  asc,
-  aoClicar,
-}: {
-  label: string;
-  campo: CampoOrdenacao;
-  atual: CampoOrdenacao;
-  asc: boolean;
-  aoClicar: (campo: CampoOrdenacao) => void;
-}) {
-  return (
-    <th className="py-2.5 pr-2">
-      <button onClick={() => aoClicar(campo)} className="flex items-center gap-1 hover:text-neutral-700 dark:hover:text-neutral-200">
-        {label}
-        <ArrowUpDown className={`h-3 w-3 ${atual === campo ? "text-brand-600" : ""} ${atual === campo && !asc ? "rotate-180" : ""}`} />
-      </button>
-    </th>
   );
 }
