@@ -52,6 +52,7 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
         descricao: dados.descricao || "",
         idTipoAtendimento: dados.idTipoAtendimento,
         idCliente: dados.idCliente,
+        dataHoraInicio: paraIso(dados.dataHoraInicio),
         prazo: paraIso(dados.prazo),
         observacao: dados.observacao || undefined,
         funcionarios: dados.funcionarios,
@@ -67,7 +68,7 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
   }
 
   return (
-    <Modal aberto={aberto} aoFechar={aoFechar} titulo="Nova Ordem de Serviço" largura="xl">
+    <Modal aberto={aberto} aoFechar={aoFechar} titulo="Nova Ordem de Serviço" largura="lg">
       <form onSubmit={handleSubmit(aoSubmeter)} className="space-y-4">
         <Input label="Título" erro={errors.tituloOs?.message} {...register("tituloOs")} />
 
@@ -111,7 +112,15 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
           />
         </div>
 
-        <Input label="Prazo" type="datetime-local" erro={errors.prazo?.message} {...register("prazo")} />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            label="Data/hora de início"
+            type="datetime-local"
+            erro={errors.dataHoraInicio?.message}
+            {...register("dataHoraInicio")}
+          />
+          <Input label="Prazo" type="datetime-local" erro={errors.prazo?.message} {...register("prazo")} />
+        </div>
 
         <Textarea label="Observação" erro={errors.observacao?.message} {...register("observacao")} />
 
@@ -134,7 +143,7 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
           </p>
         )}
 
-        <div className="sticky bottom-0 -mx-6 -mb-6 flex justify-end gap-2 rounded-b-2xl border-t border-neutral-200 bg-white px-6 py-4 dark:border-neutral-800 dark:bg-neutral-900">
+        <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={aoFechar}>
             Cancelar
           </Button>
