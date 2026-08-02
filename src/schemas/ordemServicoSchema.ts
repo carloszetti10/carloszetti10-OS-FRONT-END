@@ -13,7 +13,6 @@ export const ordemServicoSchema = z.object({
     .int()
     .positive("Selecione o tipo de atendimento."),
   idCliente: z.number({ invalid_type_error: "Selecione o cliente." }).int().positive("Selecione o cliente."),
-  dataHoraInicio: z.string().optional().or(z.literal("")),
   prazo: z.string().optional().or(z.literal("")),
   observacao: z.string().optional().or(z.literal("")),
   funcionarios: z
