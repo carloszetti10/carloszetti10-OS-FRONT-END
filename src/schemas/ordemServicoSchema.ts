@@ -13,6 +13,7 @@ export const ordemServicoSchema = z.object({
     .int()
     .positive("Selecione o tipo de atendimento."),
   idCliente: z.number({ invalid_type_error: "Selecione o cliente." }).int().positive("Selecione o cliente."),
+  dataHoraInicio: z.string().optional().or(z.literal("")),
   prazo: z.string().optional().or(z.literal("")),
   observacao: z.string().optional().or(z.literal("")),
   funcionarios: z
@@ -31,13 +32,12 @@ export const relatorioSchema = z.object({
 export type RelatorioFormValues = z.infer<typeof relatorioSchema>;
 
 // Edição da OS já criada — só os campos que fazem sentido corrigir depois:
-// título, descrição e prazo. Cliente/tipo de atendimento/status não entram
-// aqui (status agora é controlado pelos botões Iniciar/Cancelar) e a data de
-// início não é mais editável manualmente — o back a define automaticamente
-// quando a OS é efetivamente iniciada.
+// título, descrição, data de início e prazo. Cliente/tipo de atendimento/
+// status não entram aqui (status agora é controlado pelos botões Iniciar/Cancelar).
 export const editarOrdemServicoSchema = z.object({
   tituloOs: z.string().min(1, "O título é obrigatório."),
   descricao: z.string().optional().or(z.literal("")),
+  dataHoraInicio: z.string().optional().or(z.literal("")),
   prazo: z.string().optional().or(z.literal("")),
 });
 export type EditarOrdemServicoFormValues = z.infer<typeof editarOrdemServicoSchema>;

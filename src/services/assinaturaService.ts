@@ -1,4 +1,5 @@
 import { api } from "@/api/axios";
+import { apiPublic } from "@/api/axiosPublic";
 import type {
   IniciarAssinaturaPayload,
   TokenAssinatura,
@@ -18,12 +19,12 @@ export const assinaturaService = {
 
   // Público (sem login) — usado na página que o cliente abre pelo link/QR code.
   buscarPublica: async (token: string): Promise<AssinaturaPublica> => {
-    const { data } = await api.get<AssinaturaPublica>(`/OrdemServico/assinatura/${token}`);
+    const { data } = await apiPublic.get<AssinaturaPublica>(`/OrdemServico/assinatura/${token}`);
     return data;
   },
 
   // Público (sem login) — envio final da assinatura do cliente + PDF.
   submeterCliente: async (token: string, payload: SubmeterAssinaturaClientePayload): Promise<void> => {
-    await api.post(`/OrdemServico/assinatura/${token}`, payload);
+    await apiPublic.post(`/OrdemServico/assinatura/${token}`, payload);
   },
 };
