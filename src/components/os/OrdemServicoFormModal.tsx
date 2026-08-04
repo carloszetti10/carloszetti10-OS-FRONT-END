@@ -52,6 +52,7 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
         descricao: dados.descricao || "",
         idTipoAtendimento: dados.idTipoAtendimento,
         idCliente: dados.idCliente,
+        dataHoraInicio: paraIso(dados.dataHoraInicio),
         prazo: paraIso(dados.prazo),
         observacao: dados.observacao || undefined,
         funcionarios: dados.funcionarios,
@@ -111,7 +112,15 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
           />
         </div>
 
-        <Input label="Prazo" type="datetime-local" erro={errors.prazo?.message} {...register("prazo")} />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input
+            label="Data/hora de início"
+            type="datetime-local"
+            erro={errors.dataHoraInicio?.message}
+            {...register("dataHoraInicio")}
+          />
+          <Input label="Prazo" type="datetime-local" erro={errors.prazo?.message} {...register("prazo")} />
+        </div>
 
         <Textarea label="Observação" erro={errors.observacao?.message} {...register("observacao")} />
 
