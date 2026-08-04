@@ -52,7 +52,7 @@ export default function Dashboard() {
       {/* Cards de indicadores. "Técnicos" não vira card separado porque no
           back não existe entidade própria — é apenas um TipoUsuario dentro
           de Funcionário, então o card de Funcionários já cobre isso. */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <CardIndicador
           icone={<ClipboardList className="h-5 w-5" />}
           rotulo="OS em aberto"
@@ -153,14 +153,14 @@ function CardIndicador({
   }[cor];
 
   return (
-    <Card className="flex items-center gap-4">
-      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${cores}`}>{icone}</div>
-      <div>
-        <p className="text-xs text-neutral-500">{rotulo}</p>
+    <Card className="flex items-center gap-3 p-4 sm:gap-4 sm:p-5">
+      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${cores}`}>{icone}</div>
+      <div className="min-w-0">
+        <p className="truncate text-xs text-neutral-500">{rotulo}</p>
         {valor === undefined ? (
           <Skeleton className="mt-1 h-6 w-10" />
         ) : (
-          <p className="font-display text-2xl font-bold">{valor}</p>
+          <p className="font-display text-xl font-bold sm:text-2xl">{valor}</p>
         )}
       </div>
     </Card>
