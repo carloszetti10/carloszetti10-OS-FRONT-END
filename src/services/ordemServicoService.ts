@@ -7,8 +7,6 @@ import type {
   AlterarStatusPayload,
   OsFuncionarioPayload,
   OsFuncionarioDetalhe,
-  FiltroOrdensServico,
-  ResultadoPaginadoOrdemServico,
 } from "@/types/ordemServico";
 import type { TokenAssinatura } from "@/types/assinatura";
 
@@ -19,15 +17,6 @@ export const ordemServicoService = {
   // (ver hooks/useOrdensServico.ts) até virar uma regra real no back.
   listar: async (): Promise<OrdemServico[]> => {
     const { data } = await api.get<OrdemServico[]>("/OrdemServico");
-    return data;
-  },
-
-  // GET /api/OrdemServico/paginado — com filtro e paginação de verdade no back
-  // (o filtro "só vê OS vinculada" já é aplicado lá, pela permissão do usuário).
-  listarPaginado: async (filtro: FiltroOrdensServico): Promise<ResultadoPaginadoOrdemServico> => {
-    const { data } = await api.get<ResultadoPaginadoOrdemServico>("/OrdemServico/paginado", {
-      params: filtro,
-    });
     return data;
   },
 
