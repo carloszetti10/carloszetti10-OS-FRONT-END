@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { ordemServicoService } from "@/services/ordemServicoService";
 import { useFuncionarioLogado } from "./useFuncionarioLogado";
 import { usePodeVerTodasAsOs } from "./usePermissoes";
@@ -8,6 +8,7 @@ import type {
   AtualizarRelatorioPayload,
   AlterarStatusPayload,
   OsFuncionarioPayload,
+  FiltroOrdensServico,
 } from "@/types/ordemServico";
 
 /**
@@ -48,12 +49,34 @@ export function useOrdemServico(id: number | undefined) {
   });
 }
 
+/**
+ * Igual ao useOrdensServico() acima, mas usando o endpoint paginado
+ * (GET /OrdemServico/paginado) — usado na tela "Todas as OS"
+ * (OrdensServicoList), que tem filtro/busca/paginação.
+ *
+ * Diferente do useOrdensServico(), aqui o filtro "só vê OS vinculada ao
+ * funcionário" já é aplicado no BACK (pela permissão do usuário logado),
+ * então não precisa repetir esse filtro aqui no front.
+ *
+ * placeholderData: keepPreviousData mantém a lista da página atual visível
+ * (em vez de mostrar undefined/loading) enquanto a próxima página ou um
+ * filtro novo ainda está sendo buscado — evita a tela "piscar" em branco.
+ */
+export function useOrdensServicoPaginado(filtro: FiltroOrdensServico) {
+  return useQuery({
+    queryKey: ["ordens-servico-paginado", filtro],
+    queryFn: () => ordemServicoService.listarPaginado(filtro),
+    placeholderData: keepPreviousData,
+  });
+}
+
 export function useCriarOrdemServico() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: CriarOrdemServicoPayload) => ordemServicoService.criar(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ordens-servico"] });
+      queryClient.invalidateQueries({ queryKey: ["ordens-servico-paginado"] });
     },
   });
 }
@@ -66,6 +89,7 @@ export function useAtualizarRelatorio(id: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ordem-servico", id] });
       queryClient.invalidateQueries({ queryKey: ["ordens-servico"] });
+      queryClient.invalidateQueries({ queryKey: ["ordens-servico-paginado"] });
     },
   });
 }
@@ -77,6 +101,7 @@ export function useAlterarStatusOs(id: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ordem-servico", id] });
       queryClient.invalidateQueries({ queryKey: ["ordens-servico"] });
+      queryClient.invalidateQueries({ queryKey: ["ordens-servico-paginado"] });
     },
   });
 }
@@ -89,6 +114,7 @@ export function useAtualizarOrdemServico(id: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ordem-servico", id] });
       queryClient.invalidateQueries({ queryKey: ["ordens-servico"] });
+      queryClient.invalidateQueries({ queryKey: ["ordens-servico-paginado"] });
     },
   });
 }
@@ -102,6 +128,7 @@ export function useAdicionarFuncionarioOs(idOs: number) {
       queryClient.invalidateQueries({ queryKey: ["ordem-servico-funcionarios", idOs] });
       queryClient.invalidateQueries({ queryKey: ["ordem-servico", idOs] });
       queryClient.invalidateQueries({ queryKey: ["ordens-servico"] });
+      queryClient.invalidateQueries({ queryKey: ["ordens-servico-paginado"] });
     },
   });
 }
@@ -115,6 +142,7 @@ export function useRemoverFuncionarioOs(idOs: number) {
       queryClient.invalidateQueries({ queryKey: ["ordem-servico-funcionarios", idOs] });
       queryClient.invalidateQueries({ queryKey: ["ordem-servico", idOs] });
       queryClient.invalidateQueries({ queryKey: ["ordens-servico"] });
+      queryClient.invalidateQueries({ queryKey: ["ordens-servico-paginado"] });
     },
   });
 }
@@ -128,6 +156,7 @@ export function useDefinirResponsavelOs(idOs: number) {
       queryClient.invalidateQueries({ queryKey: ["ordem-servico-funcionarios", idOs] });
       queryClient.invalidateQueries({ queryKey: ["ordem-servico", idOs] });
       queryClient.invalidateQueries({ queryKey: ["ordens-servico"] });
+      queryClient.invalidateQueries({ queryKey: ["ordens-servico-paginado"] });
     },
   });
 }
