@@ -19,9 +19,11 @@ interface EditarOrdemServicoModalProps {
 }
 
 /**
- * Edição da OS já criada: título, descrição, data de início e prazo.
+ * Edição da OS já criada: título, descrição e prazo.
  * Cliente, tipo de atendimento e status ficam de fora de propósito — status
- * agora é controlado pelos botões Iniciar/Cancelar, não por aqui.
+ * agora é controlado pelos botões Iniciar/Cancelar, não por aqui. A data de
+ * início também não entra aqui: ela é definida automaticamente pelo back
+ * quando o funcionário efetivamente inicia a OS.
  */
 export function EditarOrdemServicoModal({ aberto, aoFechar, ordemServico }: EditarOrdemServicoModalProps) {
   const mostrarToast = useToastStore((s) => s.mostrar);
@@ -39,7 +41,6 @@ export function EditarOrdemServicoModal({ aberto, aoFechar, ordemServico }: Edit
     reset({
       tituloOs: ordemServico.tituloOs,
       descricao: ordemServico.descricao ?? "",
-      dataHoraInicio: paraInputDatetime(ordemServico.dataHoraInicio),
       prazo: paraInputDatetime(ordemServico.prazo),
     });
   }, [aberto, ordemServico, reset]);
@@ -52,7 +53,7 @@ export function EditarOrdemServicoModal({ aberto, aoFechar, ordemServico }: Edit
         idTipoAtendimento: ordemServico.idTipoAtendimento,
         idCliente: ordemServico.idCliente,
         status: ordemServico.status,
-        dataHoraInicio: paraIso(dados.dataHoraInicio) ?? null,
+        dataHoraInicio: ordemServico.dataHoraInicio ?? null,
         dataHoraFim: ordemServico.dataHoraFim ?? null,
         prazo: paraIso(dados.prazo) ?? null,
         observacao: ordemServico.observacao ?? undefined,
@@ -72,15 +73,7 @@ export function EditarOrdemServicoModal({ aberto, aoFechar, ordemServico }: Edit
         <Input label="Título" erro={errors.tituloOs?.message} {...register("tituloOs")} />
         <Textarea label="Descrição" erro={errors.descricao?.message} {...register("descricao")} />
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input
-            label="Data/hora de início"
-            type="datetime-local"
-            erro={errors.dataHoraInicio?.message}
-            {...register("dataHoraInicio")}
-          />
-          <Input label="Prazo" type="datetime-local" erro={errors.prazo?.message} {...register("prazo")} />
-        </div>
+        <Input label="Prazo" type="datetime-local" erro={errors.prazo?.message} {...register("prazo")} />
 
         {error && (
           <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950">
