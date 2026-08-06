@@ -58,3 +58,18 @@ export function mascararTelefone(valor: string): string {
   }
   return digitos.replace(/(\d{2})(\d{5})(\d{0,4})/, "($1) $2-$3").trim();
 }
+
+/**
+ * Formata uma duração em horas (número decimal) pro formato mais legível
+ * possível: minutos (< 1h), horas com 1 decimal (< 24h) ou dias + horas (>= 24h).
+ * Usado nos indicadores de tempo de conclusão de OS.
+ */
+export function formatarDuracaoHoras(horas?: number | null): string {
+  if (horas === null || horas === undefined || Number.isNaN(horas)) return "—";
+  if (horas < 1) return `${Math.max(1, Math.round(horas * 60))} min`;
+  if (horas < 24) return `${horas.toFixed(1)} h`;
+
+  const dias = Math.floor(horas / 24);
+  const horasRestantes = Math.round(horas % 24);
+  return horasRestantes > 0 ? `${dias}d ${horasRestantes}h` : `${dias}d`;
+}

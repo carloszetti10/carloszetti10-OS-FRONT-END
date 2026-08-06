@@ -2,6 +2,7 @@ import { useLocation } from "react-router-dom";
 
 const ROTULOS: Record<string, string> = {
   "": "Dashboard",
+  indicadores: "Indicadores",
   "ordens-servico": "Ordens de Serviço",
   clientes: "Clientes",
   funcionarios: "Funcionários",
