@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   ChevronsLeft,
   ChevronsRight,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { usePodeGerenciarPermissoes } from "@/hooks/usePermissoes";
@@ -20,6 +21,7 @@ interface SidebarProps {
 
 const ITENS_MENU = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, fim: true },
+  { to: "/indicadores", label: "Indicadores", icon: BarChart3 },
   { to: "/ordens-servico", label: "Ordens de Serviço", icon: ClipboardList },
   { to: "/clientes", label: "Clientes", icon: Users },
   { to: "/funcionarios", label: "Funcionários", icon: UserCog },
