@@ -1,14 +1,15 @@
+import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
-import { SearchSelect } from "@/components/ui/SearchSelect";
+import { SearchSelect, type OpcaoSearchSelect } from "@/components/ui/SearchSelect";
 import { Button } from "@/components/ui/Button";
 import { FuncionarioPicker } from "./FuncionarioPicker";
 import { ordemServicoSchema, type OrdemServicoFormValues } from "@/schemas/ordemServicoSchema";
 import { useTiposAtendimento } from "@/hooks/useTiposAtendimento";
-import { useClientes } from "@/hooks/useClientes";
+import { useClienteBusca } from "@/hooks/useClientes";
 import { useFuncionarios } from "@/hooks/useFuncionarios";
 import { useCriarOrdemServico } from "@/hooks/useOrdensServico";
 import { useToastStore } from "@/stores/toastStore";
@@ -28,9 +29,16 @@ interface OrdemServicoFormModalProps {
  */
 export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModalProps) {
   const { data: tipos } = useTiposAtendimento();
-  const { data: clientes } = useClientes({ somenteAtivos: true });
   const { data: funcionarios } = useFuncionarios({ somenteAtivos: true });
   const mostrarToast = useToastStore((s) => s.mostrar);
+
+  // Busca de cliente no servidor (GET /Clientes/paginado?busca=), não mais a
+  // lista inteira de clientes carregada e filtrada em memória — evita puxar
+  // todo o cadastro pro front e nunca bate no banco a cada tecla (debounce
+  // dentro de useClienteBusca).
+  const [buscaCliente, setBuscaCliente] = useState("");
+  const { data: clientesEncontrados, isFetching: buscandoClientes } = useClienteBusca(buscaCliente);
+  const [clienteSelecionado, setClienteSelecionado] = useState<OpcaoSearchSelect | null>(null);
 
   const {
     register,
@@ -61,6 +69,8 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
         onSuccess: () => {
           mostrarToast("Ordem de serviço criada com sucesso.", "sucesso");
           reset({ funcionarios: [] });
+          setBuscaCliente("");
+          setClienteSelecionado(null);
           aoFechar();
         },
       }
@@ -98,15 +108,26 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
               <SearchSelect
                 label="Cliente"
                 placeholder="Buscar cliente…"
-                opcoes={(clientes ?? []).map((c) => ({
+                opcoes={(clientesEncontrados ?? []).map((c) => ({
                   value: c.idCliente,
                   label: c.nomeFantasia ?? c.razaoSocial ?? `Cliente #${c.idCliente}`,
                   sublabel: c.documento,
                 }))}
                 valor={field.value}
-                aoSelecionar={(v) => field.onChange(v)}
+                aoSelecionar={(v, opcao) => {
+                  field.onChange(v);
+                  setClienteSelecionado(opcao ?? null);
+                }}
+                termoBusca={buscaCliente}
+                aoMudarTermoBusca={setBuscaCliente}
+                carregando={buscandoClientes}
+                rotuloSelecionado={clienteSelecionado?.label}
                 erro={errors.idCliente?.message}
-                vazio="Nenhum cliente ativo encontrado."
+                vazio={
+                  buscaCliente.trim().length < 2
+                    ? "Digite ao menos 2 letras para buscar."
+                    : "Nenhum cliente encontrado."
+                }
               />
             )}
           />
