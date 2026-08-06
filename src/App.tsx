@@ -4,6 +4,7 @@ import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { Toaster } from "@/components/ui/Toaster";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
+import Indicadores from "@/pages/Indicadores";
 import OrdensServicoList from "@/pages/ordens-servico/OrdensServicoList";
 import OrdemServicoDetalhe from "@/pages/ordens-servico/OrdemServicoDetalhe";
 import ClientesList from "@/pages/clientes/ClientesList";
@@ -29,6 +30,7 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/indicadores" element={<Indicadores />} />
             <Route path="/ordens-servico" element={<OrdensServicoList />} />
             <Route path="/ordens-servico/:id" element={<OrdemServicoDetalhe />} />
             <Route path="/clientes" element={<ClientesList />} />
