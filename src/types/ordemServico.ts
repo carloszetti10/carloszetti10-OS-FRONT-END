@@ -69,3 +69,27 @@ export interface OrdemServico {
   possuiPdfAssinado: boolean; // novo campo (back) — true quando já existe um PDF assinado salvo
   possuiPdfFotos: boolean; // true quando já existe um PDF de fotos do atendimento salvo
 }
+
+// Espelha FiltroOrdemServicoDto (query string de GET /OrdemServico/paginado).
+// Datas em "yyyy-mm-dd" (mesmo formato do <input type="date">) — o back aceita
+// DateTime e faz o parse normalmente.
+export interface FiltroOrdensServico {
+  pagina: number;
+  tamanhoPagina: number;
+  status?: StatusOs;
+  idCliente?: number;
+  idTipoAtendimento?: number;
+  dataInicioDe?: string;
+  dataInicioAte?: string;
+  dataFimDe?: string;
+  dataFimAte?: string;
+  busca?: string;
+}
+
+// Espelha ResultadoPaginadoOrdemServicoDto
+export interface ResultadoPaginadoOrdemServico {
+  itens: OrdemServico[];
+  totalRegistros: number;
+  pagina: number;
+  tamanhoPagina: number;
+}

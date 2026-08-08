@@ -25,6 +25,26 @@ interface OrdemServicoFormModalProps {
  * Cliente e Tipo de Atendimento usam busca (SearchSelect) em vez de <select>
  * gigante — importante quando há muitos cadastros. Funcionários usam o
  * FuncionarioPicker: pesquisa e adiciona, com só um responsável possível.
+ *
+ * Sem rótulos de seção nem divisores entre os blocos — cada campo já tem
+ * seu próprio label, então uma legenda de seção só repetia informação e
+ * ocupava altura extra numa tela que já é longa. O espaçamento (space-y-6)
+ * entre os grupos é suficiente pra separar visualmente as etapas do
+ * formulário.
+ *
+ * Cliente fica em largura total: é o campo de maior peso pra identificar a
+ * OS e o SearchSelect mostra razão social/nome fantasia + documento, então
+ * precisa de espaço pra não truncar o texto.
+ *
+ * Tipo de atendimento e Prazo ficam lado a lado: os dois são campos de
+ * altura fixa (sem chips nem lista que cresce), então uma linha só economiza
+ * espaço vertical sem prejudicar a leitura. O tipo de atendimento ocupa o
+ * espaço flexível (nomes de tipo variam de tamanho) e o prazo fica compacto,
+ * alinhado à direita.
+ *
+ * Funcionários continua em largura total, abaixo: é um picker com chips +
+ * busca que cresce verticalmente, então não combina bem com uma grade rígida
+ * de duas colunas.
  */
 export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModalProps) {
   const { data: tipos } = useTiposAtendimento();
@@ -52,7 +72,6 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
         descricao: dados.descricao || "",
         idTipoAtendimento: dados.idTipoAtendimento,
         idCliente: dados.idCliente,
-        dataHoraInicio: paraIso(dados.dataHoraInicio),
         prazo: paraIso(dados.prazo),
         observacao: dados.observacao || undefined,
         funcionarios: dados.funcionarios,
@@ -69,61 +88,63 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
 
   return (
     <Modal aberto={aberto} aoFechar={aoFechar} titulo="Nova Ordem de Serviço" largura="lg">
-      <form onSubmit={handleSubmit(aoSubmeter)} className="space-y-4">
+      <form onSubmit={handleSubmit(aoSubmeter)} className="space-y-6">
         <Input label="Título" erro={errors.tituloOs?.message} {...register("tituloOs")} />
-
         <Textarea label="Descrição" erro={errors.descricao?.message} {...register("descricao")} />
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Controller
-            control={control}
-            name="idTipoAtendimento"
-            render={({ field }) => (
-              <SearchSelect
-                label="Tipo de atendimento"
-                placeholder="Selecione o tipo…"
-                opcoes={(tipos ?? []).map((t) => ({ value: t.id, label: t.descricao }))}
-                valor={field.value}
-                aoSelecionar={(v) => field.onChange(v)}
-                erro={errors.idTipoAtendimento?.message}
-                vazio="Nenhum tipo de atendimento cadastrado."
-              />
-            )}
-          />
+        {/* Cliente — largura total: é o campo de maior peso pra identificar
+            a OS, e o SearchSelect exibe razão social/nome fantasia junto com
+            o documento, então precisa de espaço pra não truncar. */}
+        <Controller
+          control={control}
+          name="idCliente"
+          render={({ field }) => (
+            <SearchSelect
+              label="Cliente"
+              placeholder="Buscar cliente…"
+              opcoes={(clientes ?? []).map((c) => ({
+                value: c.idCliente,
+                label: c.nomeFantasia ?? c.razaoSocial ?? `Cliente #${c.idCliente}`,
+                sublabel: c.documento,
+              }))}
+              valor={field.value}
+              aoSelecionar={(v) => field.onChange(v)}
+              erro={errors.idCliente?.message}
+              vazio="Nenhum cliente ativo encontrado."
+            />
+          )}
+        />
 
-          <Controller
-            control={control}
-            name="idCliente"
-            render={({ field }) => (
-              <SearchSelect
-                label="Cliente"
-                placeholder="Buscar cliente…"
-                opcoes={(clientes ?? []).map((c) => ({
-                  value: c.idCliente,
-                  label: c.nomeFantasia ?? c.razaoSocial ?? `Cliente #${c.idCliente}`,
-                  sublabel: c.documento,
-                }))}
-                valor={field.value}
-                aoSelecionar={(v) => field.onChange(v)}
-                erro={errors.idCliente?.message}
-                vazio="Nenhum cliente ativo encontrado."
-              />
-            )}
-          />
+        {/* Tipo de atendimento e Prazo lado a lado: ambos são inputs de
+            altura fixa, então ganham em compacidade sem perder legibilidade.
+            O tipo ocupa o espaço flexível e o prazo fica compacto, alinhado
+            à direita. */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+          <div className="sm:flex-1">
+            <Controller
+              control={control}
+              name="idTipoAtendimento"
+              render={({ field }) => (
+                <SearchSelect
+                  label="Tipo de atendimento"
+                  placeholder="Selecione o tipo…"
+                  opcoes={(tipos ?? []).map((t) => ({ value: t.id, label: t.descricao }))}
+                  valor={field.value}
+                  aoSelecionar={(v) => field.onChange(v)}
+                  erro={errors.idTipoAtendimento?.message}
+                  vazio="Nenhum tipo de atendimento cadastrado."
+                />
+              )}
+            />
+          </div>
+
+          <div className="sm:w-56 sm:shrink-0">
+            <Input label="Prazo" type="datetime-local" erro={errors.prazo?.message} {...register("prazo")} />
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input
-            label="Data/hora de início"
-            type="datetime-local"
-            erro={errors.dataHoraInicio?.message}
-            {...register("dataHoraInicio")}
-          />
-          <Input label="Prazo" type="datetime-local" erro={errors.prazo?.message} {...register("prazo")} />
-        </div>
-
-        <Textarea label="Observação" erro={errors.observacao?.message} {...register("observacao")} />
-
+        {/* Equipe — picker com chips + busca que cresce verticalmente,
+            então fica melhor em largura total, sem dividir coluna. */}
         <Controller
           control={control}
           name="funcionarios"
@@ -136,6 +157,8 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
             />
           )}
         />
+
+        <Textarea label="Observação" erro={errors.observacao?.message} {...register("observacao")} />
 
         {error && (
           <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950">

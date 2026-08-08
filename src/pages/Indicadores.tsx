@@ -15,10 +15,9 @@ import { formatarDuracaoHoras } from "@/utils/formatters";
 /**
  * TODO(back): igual ao Dashboard, essas métricas são calculadas 100% no
  * front a partir da lista completa de OS (useOrdensServico) + Funcionários.
- * Funciona bem no volume atual, mas se a base crescer demais vale a pena
- * expor um endpoint de agregação (ex.: GET /OrdemServico/indicadores com
- * filtros de período/funcionário) pra não precisar trazer tudo pro cliente
- * só pra somar e agrupar.
+ * Funciona bem no volume atual, mas irei expor um endpoint de agregação 
+ * (ex.: GET /OrdemServico/indicadores com filtros de período/funcionário) 
+ * pra não precisar trazer tudo pro cliente só pra somar e agrupar.
  */
 export default function Indicadores() {
   const { data: ordens, isLoading: carregandoOs } = useOrdensServico();
