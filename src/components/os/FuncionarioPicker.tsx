@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Search, X, Star } from "lucide-react";
 import { cn } from "@/utils/cn";
+import { useFuncionarioBusca } from "@/hooks/useFuncionarios";
 import type { Funcionario } from "@/types/funcionario";
 
 export interface FuncionarioSelecionado {
@@ -9,39 +10,35 @@ export interface FuncionarioSelecionado {
 }
 
 interface FuncionarioPickerProps {
-  funcionariosDisponiveis: Funcionario[];
   valor: FuncionarioSelecionado[];
   aoMudar: (valor: FuncionarioSelecionado[]) => void;
   erro?: string;
 }
 
 /**
- * Substitui a lista gigante de checkboxes: pesquisa por nome e vai
- * adicionando funcionários um a um (como "chips"). Clique na estrela pra
- * marcar quem é o responsável — só pode haver um (o back exige exatamente
- * um responsável por OS).
+ * Substitui a lista gigante de checkboxes: pesquisa por nome (agora direto
+ * no servidor, GET /Funcionario/paginado — mesmo padrão do useClienteBusca)
+ * e vai adicionando funcionários um a um (como "chips"). Clique na estrela
+ * pra marcar quem é o responsável — só pode haver um (o back exige
+ * exatamente um responsável por OS).
  */
-export function FuncionarioPicker({
-  funcionariosDisponiveis,
-  valor,
-  aoMudar,
-  erro,
-}: FuncionarioPickerProps) {
+export function FuncionarioPicker({ valor, aoMudar, erro }: FuncionarioPickerProps) {
   const [termo, setTermo] = useState("");
   const [aberto, setAberto] = useState(false);
+  const { data: encontrados, isFetching: buscando } = useFuncionarioBusca(termo);
+
+  // Nomes dos já selecionados guardados aqui (não em funcionariosDisponiveis,
+  // que não existe mais) — preenchido no momento em que cada um é adicionado,
+  // pra continuar mostrando o chip mesmo se ele sair dos resultados da busca.
+  const [nomesSelecionados, setNomesSelecionados] = useState<Record<number, string>>({});
 
   const idsSelecionados = new Set(valor.map((f) => f.idFuncionario));
-
-  const resultados = useMemo(() => {
-    const disponiveis = funcionariosDisponiveis.filter((f) => !idsSelecionados.has(f.id));
-    if (!termo.trim()) return disponiveis.slice(0, 8);
-    const t = termo.trim().toLowerCase();
-    return disponiveis.filter((f) => f.nome.toLowerCase().includes(t)).slice(0, 8);
-  }, [funcionariosDisponiveis, termo, idsSelecionados]);
+  const resultados = (encontrados ?? []).filter((f) => !idsSelecionados.has(f.id)).slice(0, 8);
 
   function adicionar(funcionario: Funcionario) {
     const ehPrimeiro = valor.length === 0;
     aoMudar([...valor, { idFuncionario: funcionario.id, responsavel: ehPrimeiro }]);
+    setNomesSelecionados((atual) => ({ ...atual, [funcionario.id]: funcionario.nome }));
     setTermo("");
   }
 
@@ -54,7 +51,7 @@ export function FuncionarioPicker({
   }
 
   function nomeDe(idFuncionario: number) {
-    return funcionariosDisponiveis.find((f) => f.id === idFuncionario)?.nome ?? `Funcionário #${idFuncionario}`;
+    return nomesSelecionados[idFuncionario] ?? `Funcionário #${idFuncionario}`;
   }
 
   return (
@@ -114,10 +111,14 @@ export function FuncionarioPicker({
           <>
             <div className="fixed inset-0 z-10" onClick={() => setAberto(false)} />
             <div className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-white shadow-card scrollbar-thin dark:border-neutral-700 dark:bg-neutral-900">
-              {resultados.length === 0 ? (
+              {termo.trim().length < 2 ? (
                 <p className="px-3 py-3 text-center text-sm text-neutral-400">
-                  {funcionariosDisponiveis.length === 0 ? "Nenhum funcionário ativo." : "Nenhum resultado."}
+                  Digite ao menos 2 letras para buscar.
                 </p>
+              ) : buscando ? (
+                <p className="px-3 py-3 text-center text-sm text-neutral-400">Buscando…</p>
+              ) : resultados.length === 0 ? (
+                <p className="px-3 py-3 text-center text-sm text-neutral-400">Nenhum resultado.</p>
               ) : (
                 resultados.map((f) => (
                   <button

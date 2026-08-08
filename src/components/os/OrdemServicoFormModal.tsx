@@ -10,7 +10,6 @@ import { FuncionarioPicker } from "./FuncionarioPicker";
 import { ordemServicoSchema, type OrdemServicoFormValues } from "@/schemas/ordemServicoSchema";
 import { useTiposAtendimento } from "@/hooks/useTiposAtendimento";
 import { useClienteBusca } from "@/hooks/useClientes";
-import { useFuncionarios } from "@/hooks/useFuncionarios";
 import { useCriarOrdemServico } from "@/hooks/useOrdensServico";
 import { useToastStore } from "@/stores/toastStore";
 import { extrairMensagemErro } from "@/utils/errorHandler";
@@ -29,7 +28,6 @@ interface OrdemServicoFormModalProps {
  */
 export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModalProps) {
   const { data: tipos } = useTiposAtendimento();
-  const { data: funcionarios } = useFuncionarios({ somenteAtivos: true });
   const mostrarToast = useToastStore((s) => s.mostrar);
 
   // Busca de cliente no servidor (GET /Clientes/paginado?busca=), não mais a
@@ -60,7 +58,6 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
         descricao: dados.descricao || "",
         idTipoAtendimento: dados.idTipoAtendimento,
         idCliente: dados.idCliente,
-        dataHoraInicio: paraIso(dados.dataHoraInicio),
         prazo: paraIso(dados.prazo),
         observacao: dados.observacao || undefined,
         funcionarios: dados.funcionarios,
@@ -78,7 +75,7 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
   }
 
   return (
-    <Modal aberto={aberto} aoFechar={aoFechar} titulo="Nova Ordem de Serviço" largura="lg">
+    <Modal aberto={aberto} aoFechar={aoFechar} titulo="Nova Ordem de Serviço" largura="lg" altura="alta">
       <form onSubmit={handleSubmit(aoSubmeter)} className="space-y-4">
         <Input label="Título" erro={errors.tituloOs?.message} {...register("tituloOs")} />
 
@@ -133,15 +130,7 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input
-            label="Data/hora de início"
-            type="datetime-local"
-            erro={errors.dataHoraInicio?.message}
-            {...register("dataHoraInicio")}
-          />
-          <Input label="Prazo" type="datetime-local" erro={errors.prazo?.message} {...register("prazo")} />
-        </div>
+        <Input label="Prazo" type="datetime-local" erro={errors.prazo?.message} {...register("prazo")} />
 
         <Textarea label="Observação" erro={errors.observacao?.message} {...register("observacao")} />
 
@@ -150,7 +139,6 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
           name="funcionarios"
           render={({ field }) => (
             <FuncionarioPicker
-              funcionariosDisponiveis={funcionarios ?? []}
               valor={field.value}
               aoMudar={field.onChange}
               erro={errors.funcionarios?.message}

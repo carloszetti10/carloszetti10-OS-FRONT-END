@@ -4,6 +4,8 @@ import type {
   CriarFuncionarioPayload,
   AtualizarFuncionarioPayload,
   AtualizarAssinaturaFuncionarioPayload,
+  FiltroFuncionarios,
+  ResultadoPaginadoFuncionario,
 } from "@/types/funcionario";
 
 export const funcionarioService = {
@@ -12,6 +14,17 @@ export const funcionarioService = {
   // Filtro "só ativos" feito no front por enquanto (ver hooks/useFuncionarios.ts).
   listar: async (): Promise<Funcionario[]> => {
     const { data } = await api.get<Funcionario[]>("/Funcionario");
+    return data;
+  },
+
+  // GET /Funcionario/paginado — paginação + busca real no back, espelhando
+  // clienteService.listarPaginado. ASSUMIDO mesmo formato de rota/DTO do
+  // /Clientes/paginado (ver nota em types/funcionario.ts) — ajustar aqui se
+  // o back real usar outro caminho ou nomes de campo.
+  listarPaginado: async (filtro: FiltroFuncionarios): Promise<ResultadoPaginadoFuncionario> => {
+    const { data } = await api.get<ResultadoPaginadoFuncionario>("/Funcionario/paginado", {
+      params: filtro,
+    });
     return data;
   },
 
