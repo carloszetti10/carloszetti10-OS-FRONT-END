@@ -32,3 +32,21 @@ export interface AtualizarFuncionarioPayload {
 export interface AtualizarAssinaturaFuncionarioPayload {
   imagemAssinatura: string;
 }
+
+// Espelha FiltroFuncionarioDto (query string de GET /Funcionario/paginado)
+// ASSUMIDO igual ao padrão de FiltroClienteDto (pagina/tamanhoPagina/busca) —
+// conferir contra o back real se a rota/campos vierem diferentes.
+export interface FiltroFuncionarios {
+  pagina: number;
+  tamanhoPagina: number;
+  busca?: string;
+}
+
+// Espelha ResultadoPaginadoFuncionarioDto — ASSUMIDO no mesmo formato do de
+// Cliente (ver types/cliente.ts). Ainda não conferido contra o back real.
+export interface ResultadoPaginadoFuncionario {
+  itens: Funcionario[];
+  totalRegistros: number;
+  pagina: number;
+  tamanhoPagina: number;
+}

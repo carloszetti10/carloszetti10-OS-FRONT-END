@@ -1,15 +1,15 @@
+import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
-import { SearchSelect } from "@/components/ui/SearchSelect";
+import { SearchSelect, type OpcaoSearchSelect } from "@/components/ui/SearchSelect";
 import { Button } from "@/components/ui/Button";
 import { FuncionarioPicker } from "./FuncionarioPicker";
 import { ordemServicoSchema, type OrdemServicoFormValues } from "@/schemas/ordemServicoSchema";
 import { useTiposAtendimento } from "@/hooks/useTiposAtendimento";
-import { useClientes } from "@/hooks/useClientes";
-import { useFuncionarios } from "@/hooks/useFuncionarios";
+import { useClienteBusca } from "@/hooks/useClientes";
 import { useCriarOrdemServico } from "@/hooks/useOrdensServico";
 import { useToastStore } from "@/stores/toastStore";
 import { extrairMensagemErro } from "@/utils/errorHandler";
@@ -48,9 +48,15 @@ interface OrdemServicoFormModalProps {
  */
 export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModalProps) {
   const { data: tipos } = useTiposAtendimento();
-  const { data: clientes } = useClientes({ somenteAtivos: true });
-  const { data: funcionarios } = useFuncionarios({ somenteAtivos: true });
   const mostrarToast = useToastStore((s) => s.mostrar);
+
+  // Busca de cliente no servidor (GET /Clientes/paginado?busca=), não mais a
+  // lista inteira de clientes carregada e filtrada em memória — evita puxar
+  // todo o cadastro pro front e nunca bate no banco a cada tecla (debounce
+  // dentro de useClienteBusca).
+  const [buscaCliente, setBuscaCliente] = useState("");
+  const { data: clientesEncontrados, isFetching: buscandoClientes } = useClienteBusca(buscaCliente);
+  const [clienteSelecionado, setClienteSelecionado] = useState<OpcaoSearchSelect | null>(null);
 
   const {
     register,
@@ -80,6 +86,8 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
         onSuccess: () => {
           mostrarToast("Ordem de serviço criada com sucesso.", "sucesso");
           reset({ funcionarios: [] });
+          setBuscaCliente("");
+          setClienteSelecionado(null);
           aoFechar();
         },
       }
@@ -87,8 +95,13 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
   }
 
   return (
+<<<<<<< HEAD
     <Modal aberto={aberto} aoFechar={aoFechar} titulo="Nova Ordem de Serviço" largura="lg">
       <form onSubmit={handleSubmit(aoSubmeter)} className="space-y-6">
+=======
+    <Modal aberto={aberto} aoFechar={aoFechar} titulo="Nova Ordem de Serviço" largura="lg" altura="alta">
+      <form onSubmit={handleSubmit(aoSubmeter)} className="space-y-4">
+>>>>>>> origin/listagem1
         <Input label="Título" erro={errors.tituloOs?.message} {...register("tituloOs")} />
         <Textarea label="Descrição" erro={errors.descricao?.message} {...register("descricao")} />
 
@@ -115,6 +128,7 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
           )}
         />
 
+<<<<<<< HEAD
         {/* Tipo de atendimento e Prazo lado a lado: ambos são inputs de
             altura fixa, então ganham em compacidade sem perder legibilidade.
             O tipo ocupa o espaço flexível e o prazo fica compacto, alinhado
@@ -145,12 +159,49 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
 
         {/* Equipe — picker com chips + busca que cresce verticalmente,
             então fica melhor em largura total, sem dividir coluna. */}
+=======
+          <Controller
+            control={control}
+            name="idCliente"
+            render={({ field }) => (
+              <SearchSelect
+                label="Cliente"
+                placeholder="Buscar cliente…"
+                opcoes={(clientesEncontrados ?? []).map((c) => ({
+                  value: c.idCliente,
+                  label: c.nomeFantasia ?? c.razaoSocial ?? `Cliente #${c.idCliente}`,
+                  sublabel: c.documento,
+                }))}
+                valor={field.value}
+                aoSelecionar={(v, opcao) => {
+                  field.onChange(v);
+                  setClienteSelecionado(opcao ?? null);
+                }}
+                termoBusca={buscaCliente}
+                aoMudarTermoBusca={setBuscaCliente}
+                carregando={buscandoClientes}
+                rotuloSelecionado={clienteSelecionado?.label}
+                erro={errors.idCliente?.message}
+                vazio={
+                  buscaCliente.trim().length < 2
+                    ? "Digite ao menos 2 letras para buscar."
+                    : "Nenhum cliente encontrado."
+                }
+              />
+            )}
+          />
+        </div>
+
+        <Input label="Prazo" type="datetime-local" erro={errors.prazo?.message} {...register("prazo")} />
+
+        <Textarea label="Observação" erro={errors.observacao?.message} {...register("observacao")} />
+
+>>>>>>> origin/listagem1
         <Controller
           control={control}
           name="funcionarios"
           render={({ field }) => (
             <FuncionarioPicker
-              funcionariosDisponiveis={funcionarios ?? []}
               valor={field.value}
               aoMudar={field.onChange}
               erro={errors.funcionarios?.message}
