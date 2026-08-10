@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Search, Star, X } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -9,7 +9,7 @@ import {
   useRemoverFuncionarioOs,
   useDefinirResponsavelOs,
 } from "@/hooks/useOrdensServico";
-import { useFuncionarios } from "@/hooks/useFuncionarios";
+import { useFuncionarioBusca } from "@/hooks/useFuncionarios";
 import { useToastStore } from "@/stores/toastStore";
 import { extrairMensagemErro } from "@/utils/errorHandler";
 import type { OsFuncionarioDetalhe } from "@/types/ordemServico";
@@ -26,7 +26,6 @@ interface GerenciarFuncionariosOsProps {
  */
 export function GerenciarFuncionariosOs({ idOs }: GerenciarFuncionariosOsProps) {
   const { data: vinculados, isLoading } = useFuncionariosDaOs(idOs);
-  const { data: funcionariosAtivos } = useFuncionarios({ somenteAtivos: true });
   const mostrarToast = useToastStore((s) => s.mostrar);
 
   const { mutate: adicionar, isPending: adicionando } = useAdicionarFuncionarioOs(idOs);
@@ -39,12 +38,10 @@ export function GerenciarFuncionariosOs({ idOs }: GerenciarFuncionariosOsProps) 
 
   const idsJaVinculados = new Set((vinculados ?? []).map((f) => f.idFuncionario));
 
-  const resultadosBusca = useMemo(() => {
-    const disponiveis = (funcionariosAtivos ?? []).filter((f) => !idsJaVinculados.has(f.id));
-    if (!termo.trim()) return disponiveis.slice(0, 8);
-    const t = termo.trim().toLowerCase();
-    return disponiveis.filter((f) => f.nome.toLowerCase().includes(t)).slice(0, 8);
-  }, [funcionariosAtivos, termo, idsJaVinculados]);
+  // Busca no servidor (GET /Funcionario/paginado), mesmo padrão do
+  // FuncionarioPicker — não filtra mais uma lista carregada inteira.
+  const { data: encontrados, isFetching: buscando } = useFuncionarioBusca(termo);
+  const resultadosBusca = (encontrados ?? []).filter((f) => !idsJaVinculados.has(f.id)).slice(0, 8);
 
   function aoAdicionar(idFuncionario: number) {
     adicionar(
@@ -146,7 +143,13 @@ export function GerenciarFuncionariosOs({ idOs }: GerenciarFuncionariosOsProps) 
           <>
             <div className="fixed inset-0 z-10" onClick={() => setBuscaAberta(false)} />
             <div className="absolute z-20 mt-1 max-h-44 w-full overflow-y-auto rounded-lg border border-neutral-200 bg-white shadow-card scrollbar-thin dark:border-neutral-700 dark:bg-neutral-900">
-              {resultadosBusca.length === 0 ? (
+              {termo.trim().length < 2 ? (
+                <p className="px-3 py-3 text-center text-sm text-neutral-400">
+                  Digite ao menos 2 letras para buscar.
+                </p>
+              ) : buscando ? (
+                <p className="px-3 py-3 text-center text-sm text-neutral-400">Buscando…</p>
+              ) : resultadosBusca.length === 0 ? (
                 <p className="px-3 py-3 text-center text-sm text-neutral-400">Nenhum resultado.</p>
               ) : (
                 resultadosBusca.map((f) => (

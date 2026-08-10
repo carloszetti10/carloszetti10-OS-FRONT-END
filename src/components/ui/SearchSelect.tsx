@@ -13,9 +13,28 @@ interface SearchSelectProps {
   placeholder?: string;
   opcoes: OpcaoSearchSelect[];
   valor?: number | null;
-  aoSelecionar: (valor: number | null) => void;
+  aoSelecionar: (valor: number | null, opcao?: OpcaoSearchSelect) => void;
   erro?: string;
   vazio?: string;
+  /**
+   * Modo servidor (opcional). Sem esses três props o componente continua
+   * 100% como antes: filtra `opcoes` em memória (bom pra listas pequenas já
+   * carregadas por inteiro, ex. Tipo de Atendimento).
+   * Informados, o componente PARA de filtrar localmente e delega a busca
+   * pro pai — usado quando `opcoes` já vem filtrado do servidor (ex.
+   * Cliente, com useClienteBusca + debounce), pra não carregar/filtrar a
+   * lista inteira em memória.
+   */
+  termoBusca?: string;
+  aoMudarTermoBusca?: (termo: string) => void;
+  carregando?: boolean;
+  /**
+   * Rótulo do item selecionado, pra quando ele pode não estar presente em
+   * `opcoes` no momento (comum no modo servidor: `opcoes` é só o resultado
+   * da última busca, e some quando o campo de texto é limpo). Sem isso, ao
+   * fechar o combobox depois de selecionar, o botão perderia o texto.
+   */
+  rotuloSelecionado?: string;
 }
 
 /**
@@ -31,30 +50,51 @@ export function SearchSelect({
   aoSelecionar,
   erro,
   vazio = "Nenhum resultado encontrado.",
+  termoBusca,
+  aoMudarTermoBusca,
+  carregando = false,
+  rotuloSelecionado,
 }: SearchSelectProps) {
   const [aberto, setAberto] = useState(false);
   const [termo, setTermo] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const selecionada = opcoes.find((o) => o.value === valor);
+  const modoServidor = !!aoMudarTermoBusca;
+  const termoAtual = modoServidor ? termoBusca ?? "" : termo;
+
+  const selecionadaLocal = opcoes.find((o) => o.value === valor);
+  const selecionada =
+    selecionadaLocal ?? (valor != null && rotuloSelecionado ? { value: valor, label: rotuloSelecionado } : undefined);
 
   const filtradas = useMemo(() => {
+    if (modoServidor) return opcoes; // já vem filtrado do servidor
     if (!termo.trim()) return opcoes;
     const t = termo.trim().toLowerCase();
     return opcoes.filter(
       (o) => o.label.toLowerCase().includes(t) || o.sublabel?.toLowerCase().includes(t)
     );
-  }, [opcoes, termo]);
+  }, [opcoes, termo, modoServidor]);
+
+  function limparTermo() {
+    setTermo("");
+    aoMudarTermoBusca?.("");
+  }
+
+  function aoMudarTexto(novoTermo: string) {
+    if (modoServidor) aoMudarTermoBusca?.(novoTermo);
+    else setTermo(novoTermo);
+  }
 
   useEffect(() => {
     function aoClicarFora(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setAberto(false);
-        setTermo("");
+        limparTermo();
       }
     }
     document.addEventListener("mousedown", aoClicarFora);
     return () => document.removeEventListener("mousedown", aoClicarFora);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -82,14 +122,16 @@ export function SearchSelect({
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
               <input
                 autoFocus
-                value={termo}
-                onChange={(e) => setTermo(e.target.value)}
+                value={termoAtual}
+                onChange={(e) => aoMudarTexto(e.target.value)}
                 placeholder="Digite para buscar…"
                 className="h-8 w-full rounded-md bg-neutral-50 pl-8 pr-2 text-sm outline-none dark:bg-neutral-800"
               />
             </div>
             <div className="max-h-56 overflow-y-auto scrollbar-thin">
-              {filtradas.length === 0 ? (
+              {carregando ? (
+                <p className="px-3 py-4 text-center text-sm text-neutral-400">Buscando…</p>
+              ) : filtradas.length === 0 ? (
                 <p className="px-3 py-4 text-center text-sm text-neutral-400">{vazio}</p>
               ) : (
                 filtradas.map((opcao) => (
@@ -97,9 +139,9 @@ export function SearchSelect({
                     key={opcao.value}
                     type="button"
                     onClick={() => {
-                      aoSelecionar(opcao.value);
+                      aoSelecionar(opcao.value, opcao);
                       setAberto(false);
-                      setTermo("");
+                      limparTermo();
                     }}
                     className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-neutral-50 dark:hover:bg-neutral-800"
                   >

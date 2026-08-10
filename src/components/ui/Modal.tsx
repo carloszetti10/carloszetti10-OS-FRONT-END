@@ -10,6 +10,9 @@ interface ModalProps {
   titulo: string;
   children: ReactNode;
   largura?: "sm" | "md" | "lg" | "xl";
+  /** "alta" dá um pouco mais de altura ao modal (ex.: formulário de OS, pra
+   *  caber a seção de consultores sem rolagem). Padrão continua "padrao". */
+  altura?: "padrao" | "alta";
 }
 
 const LARGURAS: Record<NonNullable<ModalProps["largura"]>, string> = {
@@ -19,12 +22,17 @@ const LARGURAS: Record<NonNullable<ModalProps["largura"]>, string> = {
   xl: "max-w-5xl",
 };
 
+const ALTURAS: Record<NonNullable<ModalProps["altura"]>, string> = {
+  padrao: "max-h-[90vh]",
+  alta: "max-h-[94vh]",
+};
+
 /**
  * Modal centralizado na tela, com X pra fechar — usado em TODO formulário de
  * cadastro do sistema (Cliente, Funcionário, OS, etc.), nunca em página/aba
  * separada, conforme pedido.
  */
-export function Modal({ aberto, aoFechar, titulo, children, largura = "md" }: ModalProps) {
+export function Modal({ aberto, aoFechar, titulo, children, largura = "md", altura = "padrao" }: ModalProps) {
   // Fecha com ESC
   useEffect(() => {
     if (!aberto) return;
@@ -51,8 +59,9 @@ export function Modal({ aberto, aoFechar, titulo, children, largura = "md" }: Mo
             transition={{ duration: 0.15 }}
             className={cn(
               "relative z-10 w-full rounded-2xl bg-white shadow-card dark:bg-neutral-900",
-              "max-h-[90vh] overflow-y-auto scrollbar-thin",
-              LARGURAS[largura]
+              "overflow-y-auto scrollbar-thin",
+              LARGURAS[largura],
+              ALTURAS[altura]
             )}
           >
             <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-6 py-4 dark:bg-neutral-900">

@@ -76,9 +76,12 @@ export default function OrdemServicoDetalhe() {
   // pra já deixar a UI coerente e não deixar o usuário tentar em vão.
   const podeEditarRelatorio = ehResponsavel && !osTravada;
 
-  // Trava pedida: só dá pra gerar/assinar o relatório depois que o relatório
-  // técnico estiver preenchido (o back também valida isso).
+  // Trava pedida: só dá pra gerar/assinar o relatório depois que a OS foi
+  // iniciada (reaproveita podeIniciar: true = ainda Agendada = não iniciada)
+  // e com o relatório técnico preenchido (o back também valida isso).
+  const osNaoIniciada = podeIniciar;
   const temRelatorioPreenchido = !!os.relatorioTecnico?.trim();
+  const podeGerarRelatorio = ehResponsavel && !osTravada && !osNaoIniciada && temRelatorioPreenchido;
 
   function aoSalvarRelatorio(dados: RelatorioFormValues) {
     salvarRelatorio(dados, {
@@ -303,15 +306,26 @@ export default function OrdemServicoDetalhe() {
             <Button
               size="sm"
               variant="secondary"
-              disabled={!temRelatorioPreenchido}
-              title={!temRelatorioPreenchido ? "Preencha e salve o relatório técnico antes de gerar o relatório assinado." : undefined}
+              disabled={!podeGerarRelatorio}
+              title={
+                osNaoIniciada
+                  ? "Inicie a OS antes de gerar o relatório assinado."
+                  : !temRelatorioPreenchido
+                  ? "Preencha e salve o relatório técnico antes de gerar o relatório assinado."
+                  : undefined
+              }
               onClick={() => setGerarRelatorioAberto(true)}
             >
               <FileSignature className="h-4 w-4" /> Gerar Relatório
             </Button>
           )}
         </div>
-        {ehResponsavel && !osTravada && !temRelatorioPreenchido && (
+        {ehResponsavel && !osTravada && osNaoIniciada && (
+          <p className="mb-2 text-xs text-amber-600 dark:text-amber-400">
+            Inicie a OS antes de gerar o relatório assinado.
+          </p>
+        )}
+        {ehResponsavel && !osTravada && !osNaoIniciada && !temRelatorioPreenchido && (
           <p className="mb-2 text-xs text-amber-600 dark:text-amber-400">
             Preencha e salve o relatório técnico abaixo antes de gerar o relatório assinado.
           </p>
