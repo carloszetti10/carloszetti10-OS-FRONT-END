@@ -25,26 +25,6 @@ interface OrdemServicoFormModalProps {
  * Cliente e Tipo de Atendimento usam busca (SearchSelect) em vez de <select>
  * gigante — importante quando há muitos cadastros. Funcionários usam o
  * FuncionarioPicker: pesquisa e adiciona, com só um responsável possível.
- *
- * Sem rótulos de seção nem divisores entre os blocos — cada campo já tem
- * seu próprio label, então uma legenda de seção só repetia informação e
- * ocupava altura extra numa tela que já é longa. O espaçamento (space-y-6)
- * entre os grupos é suficiente pra separar visualmente as etapas do
- * formulário.
- *
- * Cliente fica em largura total: é o campo de maior peso pra identificar a
- * OS e o SearchSelect mostra razão social/nome fantasia + documento, então
- * precisa de espaço pra não truncar o texto.
- *
- * Tipo de atendimento e Prazo ficam lado a lado: os dois são campos de
- * altura fixa (sem chips nem lista que cresce), então uma linha só economiza
- * espaço vertical sem prejudicar a leitura. O tipo de atendimento ocupa o
- * espaço flexível (nomes de tipo variam de tamanho) e o prazo fica compacto,
- * alinhado à direita.
- *
- * Funcionários continua em largura total, abaixo: é um picker com chips +
- * busca que cresce verticalmente, então não combina bem com uma grade rígida
- * de duas colunas.
  */
 export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModalProps) {
   const { data: tipos } = useTiposAtendimento();
@@ -95,19 +75,16 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
   }
 
   return (
-<<<<<<< HEAD
     <Modal aberto={aberto} aoFechar={aoFechar} titulo="Nova Ordem de Serviço" largura="lg">
       <form onSubmit={handleSubmit(aoSubmeter)} className="space-y-6">
-=======
-    <Modal aberto={aberto} aoFechar={aoFechar} titulo="Nova Ordem de Serviço" largura="lg" altura="alta">
-      <form onSubmit={handleSubmit(aoSubmeter)} className="space-y-4">
->>>>>>> origin/listagem1
         <Input label="Título" erro={errors.tituloOs?.message} {...register("tituloOs")} />
         <Textarea label="Descrição" erro={errors.descricao?.message} {...register("descricao")} />
 
         {/* Cliente — largura total: é o campo de maior peso pra identificar
             a OS, e o SearchSelect exibe razão social/nome fantasia junto com
-            o documento, então precisa de espaço pra não truncar. */}
+            o documento, então precisa de espaço pra não truncar. Busca no
+            servidor (GET /Clientes/paginado?busca=), não mais a lista
+            inteira de clientes carregada e filtrada em memória. */}
         <Controller
           control={control}
           name="idCliente"
@@ -115,20 +92,30 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
             <SearchSelect
               label="Cliente"
               placeholder="Buscar cliente…"
-              opcoes={(clientes ?? []).map((c) => ({
+              opcoes={(clientesEncontrados ?? []).map((c) => ({
                 value: c.idCliente,
                 label: c.nomeFantasia ?? c.razaoSocial ?? `Cliente #${c.idCliente}`,
                 sublabel: c.documento,
               }))}
               valor={field.value}
-              aoSelecionar={(v) => field.onChange(v)}
+              aoSelecionar={(v, opcao) => {
+                field.onChange(v);
+                setClienteSelecionado(opcao ?? null);
+              }}
+              termoBusca={buscaCliente}
+              aoMudarTermoBusca={setBuscaCliente}
+              carregando={buscandoClientes}
+              rotuloSelecionado={clienteSelecionado?.label}
               erro={errors.idCliente?.message}
-              vazio="Nenhum cliente ativo encontrado."
+              vazio={
+                buscaCliente.trim().length < 2
+                  ? "Digite ao menos 2 letras para buscar."
+                  : "Nenhum cliente encontrado."
+              }
             />
           )}
         />
 
-<<<<<<< HEAD
         {/* Tipo de atendimento e Prazo lado a lado: ambos são inputs de
             altura fixa, então ganham em compacidade sem perder legibilidade.
             O tipo ocupa o espaço flexível e o prazo fica compacto, alinhado
@@ -159,44 +146,6 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
 
         {/* Equipe — picker com chips + busca que cresce verticalmente,
             então fica melhor em largura total, sem dividir coluna. */}
-=======
-          <Controller
-            control={control}
-            name="idCliente"
-            render={({ field }) => (
-              <SearchSelect
-                label="Cliente"
-                placeholder="Buscar cliente…"
-                opcoes={(clientesEncontrados ?? []).map((c) => ({
-                  value: c.idCliente,
-                  label: c.nomeFantasia ?? c.razaoSocial ?? `Cliente #${c.idCliente}`,
-                  sublabel: c.documento,
-                }))}
-                valor={field.value}
-                aoSelecionar={(v, opcao) => {
-                  field.onChange(v);
-                  setClienteSelecionado(opcao ?? null);
-                }}
-                termoBusca={buscaCliente}
-                aoMudarTermoBusca={setBuscaCliente}
-                carregando={buscandoClientes}
-                rotuloSelecionado={clienteSelecionado?.label}
-                erro={errors.idCliente?.message}
-                vazio={
-                  buscaCliente.trim().length < 2
-                    ? "Digite ao menos 2 letras para buscar."
-                    : "Nenhum cliente encontrado."
-                }
-              />
-            )}
-          />
-        </div>
-
-        <Input label="Prazo" type="datetime-local" erro={errors.prazo?.message} {...register("prazo")} />
-
-        <Textarea label="Observação" erro={errors.observacao?.message} {...register("observacao")} />
-
->>>>>>> origin/listagem1
         <Controller
           control={control}
           name="funcionarios"
