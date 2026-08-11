@@ -170,6 +170,16 @@ export default function OrdensServicoList() {
             ))}
           </Select>
 
+           <Select
+              value={filtroTipoAtendimento}
+              onChange={(e) => { setFiltroTipoAtendimento(e.target.value); setPagina(1); }}
+            >
+              <option value="">Todos os tipos de atendimento</option>
+              {tiposAtendimento?.map((t) => (
+                <option key={t.id} value={t.id}>{t.descricao}</option>
+              ))}
+            </Select>
+        {/*
           <Select value={filtroCliente} onChange={(e) => { setFiltroCliente(e.target.value); setPagina(1); }}>
             <option value="">Todos os clientes</option>
             {clientes?.map((c) => (
@@ -177,7 +187,7 @@ export default function OrdensServicoList() {
             ))}
           </Select>
 
-          {/*
+          
             TODO(back): filtro por Responsável removido daqui — o endpoint
             GET /OrdemServico/paginado ainda não aceita um parâmetro de
             funcionário responsável. Antes disso filtrava em memória no
@@ -208,15 +218,7 @@ export default function OrdensServicoList() {
 
         {mostrarMaisFiltros && (
           <div className="grid grid-cols-1 gap-3 rounded-xl bg-neutral-50 p-3 sm:grid-cols-2 lg:grid-cols-5 dark:bg-neutral-800/50">
-            <Select
-              value={filtroTipoAtendimento}
-              onChange={(e) => { setFiltroTipoAtendimento(e.target.value); setPagina(1); }}
-            >
-              <option value="">Todos os tipos de atendimento</option>
-              {tiposAtendimento?.map((t) => (
-                <option key={t.id} value={t.id}>{t.descricao}</option>
-              ))}
-            </Select>
+           
 
             <Input
               type="date"
