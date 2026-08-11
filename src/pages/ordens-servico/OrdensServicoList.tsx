@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Plus, Search, Eye, Trash2, FileDown, SlidersHorizontal, X } from "lucide-react";
 import { useOrdensServicoPaginado } from "@/hooks/useOrdensServico";
-import { useClientes } from "@/hooks/useClientes";
+//import { useClientes } from "@/hooks/useClientes";
 import { useTiposAtendimento } from "@/hooks/useTiposAtendimento";
 import { useDebounce } from "@/hooks/useDebounce";
 import { ordemServicoService } from "@/services/ordemServicoService";
@@ -179,7 +179,8 @@ export default function OrdensServicoList() {
                 <option key={t.id} value={t.id}>{t.descricao}</option>
               ))}
             </Select>
-        {/*
+
+         {/*
           <Select value={filtroCliente} onChange={(e) => { setFiltroCliente(e.target.value); setPagina(1); }}>
             <option value="">Todos os clientes</option>
             {clientes?.map((c) => (
