@@ -27,7 +27,7 @@ const TAMANHO_PAGINA = 10;
 
 export default function OrdensServicoList() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { data: clientes } = useClientes({ somenteAtivos: true });
+  //const { data: clientes } = useClientes({ somenteAtivos: true });
   const { data: tiposAtendimento } = useTiposAtendimento();
   const queryClient = useQueryClient();
   const mostrarToast = useToastStore((s) => s.mostrar);
