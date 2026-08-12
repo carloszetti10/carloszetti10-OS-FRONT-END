@@ -1,7 +1,7 @@
 import { ReactNode, useMemo, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 import { CheckCircle2, Clock3, Gauge, RotateCcw } from "lucide-react";
-import { useOrdensServico } from "@/hooks/useOrdensServico";
+import { useIndicadores } from "@/hooks/useOrdensServico";
 import { useFuncionarios } from "@/hooks/useFuncionarios";
 import { Card } from "@/components/ui/Card";
 import { Select } from "@/components/ui/Select";
@@ -9,18 +9,14 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { StatusOs } from "@/types/enums";
 import { formatarDuracaoHoras } from "@/utils/formatters";
 
 /**
- * TODO(back): igual ao Dashboard, essas métricas são calculadas 100% no
- * front a partir da lista completa de OS (useOrdensServico) + Funcionários.
- * Funciona bem no volume atual, mas irei expor um endpoint de agregação 
- * (ex.: GET /OrdemServico/indicadores com filtros de período/funcionário) 
- * pra não precisar trazer tudo pro cliente só pra somar e agrupar.
+ * Indicadores de desempenho por consultor/período.
+ * A agregação (filtrar concluídas, calcular tempo médio, agrupar por
+ * responsável) Esta página só monta o filtro e exibe o resultado.
  */
 export default function Indicadores() {
-  const { data: ordens, isLoading: carregandoOs } = useOrdensServico();
   const { data: funcionarios, isLoading: carregandoFuncionarios } = useFuncionarios({
     somenteAtivos: true,
   });
@@ -29,13 +25,20 @@ export default function Indicadores() {
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
 
-  const carregando = carregandoOs || carregandoFuncionarios;
+  // Mesma regra que existia no front antes de migrar: período considera a
+  // DATA DE CONCLUSÃO da OS (dataHoraFim), início do dia até o fim do dia.
+  const filtro = useMemo(
+    () => ({
+      idConsultor: idConsultor === "todos" ? undefined : Number(idConsultor),
+      concluidasApartirDe: dataInicio ? `${dataInicio}T00:00:00` : undefined,
+      concluidasAte: dataFim ? `${dataFim}T23:59:59` : undefined,
+    }),
+    [idConsultor, dataInicio, dataFim]
+  );
 
-  const nomeDoFuncionario = useMemo(() => {
-    const mapa = new Map<number, string>();
-    funcionarios?.forEach((f) => mapa.set(f.id, f.nome));
-    return (id: number) => mapa.get(id) ?? `Funcionário #${id}`;
-  }, [funcionarios]);
+  const { data: indicadores, isLoading: carregandoIndicadores } = useIndicadores(filtro);
+
+  const carregando = carregandoIndicadores || carregandoFuncionarios;
 
   const filtrosAtivos = idConsultor !== "todos" || !!dataInicio || !!dataFim;
 
@@ -45,77 +48,7 @@ export default function Indicadores() {
     setDataFim("");
   }
 
-  // OS concluídas (precisam ter dataHoraFim) já filtradas por período e consultor.
-  // O período considera a DATA DE CONCLUSÃO da OS (dataHoraFim).
-  const concluidas = useMemo(() => {
-    if (!ordens) return [];
-    const inicio = dataInicio ? new Date(`${dataInicio}T00:00:00`) : null;
-    const fim = dataFim ? new Date(`${dataFim}T23:59:59`) : null;
-    const idConsultorNum = idConsultor === "todos" ? null : Number(idConsultor);
-
-    return ordens.filter((os) => {
-      if (os.status !== StatusOs.Concluida || !os.dataHoraFim) return false;
-
-      const dataFimOs = new Date(os.dataHoraFim);
-      if (inicio && dataFimOs < inicio) return false;
-      if (fim && dataFimOs > fim) return false;
-
-      if (idConsultorNum !== null) {
-        const vinculado = os.funcionarios.some((f) => f.idFuncionario === idConsultorNum);
-        if (!vinculado) return false;
-      }
-
-      return true;
-    });
-  }, [ordens, dataInicio, dataFim, idConsultor]);
-
-  // Tempo de conclusão (em horas) de cada OS filtrada que tem início e fim registrados
-  const temposConclusaoHoras = useMemo(
-    () =>
-      concluidas
-        .filter((os) => os.dataHoraInicio && os.dataHoraFim)
-        .map((os) => {
-          const inicioMs = new Date(os.dataHoraInicio!).getTime();
-          const fimMs = new Date(os.dataHoraFim!).getTime();
-          return Math.max(0, (fimMs - inicioMs) / 3_600_000);
-        }),
-    [concluidas]
-  );
-
-  const tempoMedioGeralHoras =
-    temposConclusaoHoras.length > 0
-      ? temposConclusaoHoras.reduce((soma, h) => soma + h, 0) / temposConclusaoHoras.length
-      : null;
-
-  // Agrupa as OS concluídas pelo funcionário RESPONSÁVEL, contando quantidade
-  // e calculando o tempo médio de conclusão de cada consultor.
-  const porConsultor = useMemo(() => {
-    const grupos = new Map<number, { quantidade: number; tempos: number[] }>();
-
-    concluidas.forEach((os) => {
-      const responsavel = os.funcionarios.find((f) => f.responsavel) ?? os.funcionarios[0];
-      if (!responsavel) return;
-
-      const grupo = grupos.get(responsavel.idFuncionario) ?? { quantidade: 0, tempos: [] };
-      grupo.quantidade += 1;
-      if (os.dataHoraInicio && os.dataHoraFim) {
-        const horas =
-          (new Date(os.dataHoraFim).getTime() - new Date(os.dataHoraInicio).getTime()) / 3_600_000;
-        grupo.tempos.push(Math.max(0, horas));
-      }
-      grupos.set(responsavel.idFuncionario, grupo);
-    });
-
-    return Array.from(grupos.entries())
-      .map(([idFuncionario, { quantidade, tempos }]) => ({
-        idFuncionario,
-        nome: nomeDoFuncionario(idFuncionario),
-        quantidade,
-        tempoMedioHoras: tempos.length ? tempos.reduce((soma, h) => soma + h, 0) / tempos.length : null,
-      }))
-      .sort((a, b) => b.quantidade - a.quantidade);
-  }, [concluidas, nomeDoFuncionario]);
-
+  const porConsultor = indicadores?.porConsultor ?? [];
   const consultorMaisProdutivo = porConsultor[0];
 
   return (
@@ -177,13 +110,13 @@ export default function Indicadores() {
         <CardIndicador
           icone={<CheckCircle2 className="h-5 w-5" />}
           rotulo="OS concluídas no período"
-          valor={carregando ? undefined : String(concluidas.length)}
+          valor={carregando ? undefined : String(indicadores?.totalConcluidas ?? 0)}
           cor="brand"
         />
         <CardIndicador
           icone={<Clock3 className="h-5 w-5" />}
           rotulo="Tempo médio de conclusão"
-          valor={carregando ? undefined : formatarDuracaoHoras(tempoMedioGeralHoras)}
+          valor={carregando ? undefined : formatarDuracaoHoras(indicadores?.tempoMedioGeralHoras ?? null)}
           cor="blue"
         />
         <CardIndicador
