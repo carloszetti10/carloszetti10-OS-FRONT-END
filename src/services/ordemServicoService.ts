@@ -9,6 +9,8 @@ import type {
   OsFuncionarioDetalhe,
   FiltroOrdensServico,
   ResultadoPaginadoOrdemServico,
+  FiltroIndicadores,
+  Indicadores,
 } from "@/types/ordemServico";
 import type { TokenAssinatura } from "@/types/assinatura";
 
@@ -94,5 +96,12 @@ export const ordemServicoService = {
   obterPdfFotos: async (idOs: number): Promise<Blob> => {
     const { data } = await api.get(`/OrdemServico/${idOs}/pdf-fotos`, { responseType: "blob" });
     return data as Blob;
+  },
+
+  // GET /api/OrdemServico/indicadores — agregados de desempenho por consultor/período.
+  // A agregação (médias, agrupamento) é toda feita no back agora; o front só exibe.
+  obterIndicadores: async (filtro: FiltroIndicadores): Promise<Indicadores> => {
+    const { data } = await api.get<Indicadores>("/OrdemServico/indicadores", { params: filtro });
+    return data;
   },
 };
