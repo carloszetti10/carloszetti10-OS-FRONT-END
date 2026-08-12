@@ -30,4 +30,5 @@ export interface SubmeterAssinaturaClientePayload {
   documentoSignatario?: string;
   imagemAssinatura: string; // base64 (PNG)
   arquivoPdf: string; // base64 do PDF final — o back desserializa como byte[] automaticamente
+  dataFinal?: string;
 }

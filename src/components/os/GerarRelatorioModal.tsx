@@ -97,6 +97,7 @@ export function GerarRelatorioModal({ aberto, aoFechar, ordemServico }: GerarRel
 
     try {
       const documentoCadastrado = clientes?.find((c) => c.idCliente === ordemServico.idCliente)?.documento ?? "";
+      const dataFinal = new Date().toISOString();
       const pdfBytes = await gerarPdfOs({
         idOs: ordemServico.idOs,
         tituloOs: ordemServico.tituloOs,
@@ -104,14 +105,14 @@ export function GerarRelatorioModal({ aberto, aoFechar, ordemServico }: GerarRel
         nomeCliente: ordemServico.nomeCliente,
         documentoCliente: documentoCadastrado,
         dataHoraInicio: ordemServico.dataHoraInicio,
-        dataHoraFim: ordemServico.dataHoraFim,
+        dataHoraFim: dataFinal,
         descricao: ordemServico.descricao,
         relatorioTecnico: ordemServico.relatorioTecnico || "",
         nomeFuncionario: funcionarioLogado?.nome ?? "",
         assinaturaFuncionarioBase64: imagemFuncionarioUsada,
         nomeSignatarioCliente: nomeCliente,
         assinaturaClienteBase64: assinaturaCliente,
-        dataAssinaturaCliente: new Date().toISOString(),
+        dataAssinaturaCliente: dataFinal,
       });
       const pdfBase64 = uint8ArrayParaBase64(pdfBytes);
 
@@ -120,6 +121,7 @@ export function GerarRelatorioModal({ aberto, aoFechar, ordemServico }: GerarRel
         documentoSignatario: documentoCliente || undefined,
         imagemAssinatura: assinaturaCliente,
         arquivoPdf: pdfBase64,
+        dataFinal:dataFinal, 
       });
 
       setEtapa("concluido-local");
