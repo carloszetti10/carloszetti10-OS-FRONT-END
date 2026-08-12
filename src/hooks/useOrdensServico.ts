@@ -9,6 +9,7 @@ import type {
   AlterarStatusPayload,
   OsFuncionarioPayload,
   FiltroOrdensServico,
+  FiltroIndicadores,
 } from "@/types/ordemServico";
 
 /**
@@ -172,5 +173,22 @@ export function useFuncionariosDaOs(idOs: number | undefined) {
     queryKey: ["ordem-servico-funcionarios", idOs],
     enabled: !!idOs,
     queryFn: () => ordemServicoService.listarFuncionarios(idOs!),
+  });
+}
+
+/**
+ * Indicadores de desempenho (OS concluídas, tempo médio, ranking por
+ * consultor) — GET /OrdemServico/indicadores. Toda a agregação acontece
+ * no back agora; aqui é só um useQuery igual aos outros.
+ *
+ * placeholderData: keepPreviousData evita a tela piscar em branco toda
+ * vez que o usuário troca um filtro (mesmo comportamento do
+ * useOrdensServicoPaginado acima).
+ */
+export function useIndicadores(filtro: FiltroIndicadores) {
+  return useQuery({
+    queryKey: ["indicadores", filtro],
+    queryFn: () => ordemServicoService.obterIndicadores(filtro),
+    placeholderData: keepPreviousData,
   });
 }

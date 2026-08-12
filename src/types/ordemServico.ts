@@ -93,3 +93,26 @@ export interface ResultadoPaginadoOrdemServico {
   pagina: number;
   tamanhoPagina: number;
 }
+
+// Espelha FiltroIndicadoresDto (query string de GET /OrdemServico/indicadores).
+// concluidasApartirDe/concluidasAte incidem sobre a DATA DE CONCLUSÃO (dataHoraFim).
+export interface FiltroIndicadores {
+  idConsultor?: number;
+  concluidasApartirDe?: string;
+  concluidasAte?: string;
+}
+
+// Espelha IndicadorConsultorDto
+export interface IndicadorConsultor {
+  idFuncionario: number;
+  nome: string;
+  quantidade: number;
+  tempoMedioHoras: number | null;
+}
+
+// Espelha IndicadoresDto — agregados já calculados no back.
+export interface Indicadores {
+  totalConcluidas: number;
+  tempoMedioGeralHoras: number | null;
+  porConsultor: IndicadorConsultor[];
+}
