@@ -41,7 +41,6 @@ export function GerarRelatorioModal({ aberto, aoFechar, ordemServico }: GerarRel
   const [salvarComoPadrao, setSalvarComoPadrao] = useState(true);
   const [imagemFuncionarioUsada, setImagemFuncionarioUsada] = useState<string | null>(null);
   const [nomeCliente, setNomeCliente] = useState("");
-  const [documentoCliente, setDocumentoCliente] = useState("");
   const [erroAssinaturaCliente, setErroAssinaturaCliente] = useState<string | null>(null);
 
   const padFuncionarioRef = useRef<SignaturePadHandle>(null);
@@ -55,7 +54,6 @@ export function GerarRelatorioModal({ aberto, aoFechar, ordemServico }: GerarRel
       setEtapa("assinar-funcionario");
       setUsarAssinaturaSalva(temAssinaturaSalva);
       setNomeCliente("");
-      setDocumentoCliente("");
       setErroAssinaturaCliente(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -118,10 +116,9 @@ export function GerarRelatorioModal({ aberto, aoFechar, ordemServico }: GerarRel
 
       await submeterCliente({
         nomeSignatario: nomeCliente,
-        documentoSignatario: documentoCliente || undefined,
         imagemAssinatura: assinaturaCliente,
         arquivoPdf: pdfBase64,
-        dataFinal:dataFinal, 
+        dataFinal: dataFinal, 
       });
 
       setEtapa("concluido-local");
@@ -220,11 +217,7 @@ export function GerarRelatorioModal({ aberto, aoFechar, ordemServico }: GerarRel
           </button>
 
           <Input label="Nome do cliente" value={nomeCliente} onChange={(e) => setNomeCliente(e.target.value)} />
-          <Input
-            label="CPF/CNPJ (opcional)"
-            value={documentoCliente}
-            onChange={(e) => setDocumentoCliente(e.target.value)}
-          />
+         
 
           <div>
             <p className="mb-1.5 text-sm font-medium text-neutral-700 dark:text-neutral-300">Assinatura do cliente</p>

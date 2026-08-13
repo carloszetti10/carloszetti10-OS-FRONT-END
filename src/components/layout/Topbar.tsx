@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Menu, Sun, Moon, Bell, LogOut, ChevronDown, User as UserIcon } from "lucide-react";
+import { Menu, Sun, Moon, LogOut, ChevronDown, User as UserIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { useThemeStore } from "@/stores/themeStore";
@@ -40,9 +40,7 @@ export function Topbar({ aoAbrirMenuMobile, itensBreadcrumb }: TopbarProps) {
           {tema === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
         </button>
 
-        <button className="relative rounded-lg p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800">
-          <Bell className="h-5 w-5" />
-        </button>
+        
 
         <div className="relative">
           <button
