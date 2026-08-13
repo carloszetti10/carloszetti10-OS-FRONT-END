@@ -23,7 +23,7 @@ export default function AssinaturaPublica() {
 
   const padRef = useRef<SignaturePadHandle>(null);
   const [nome, setNome] = useState("");
-  const [documento, setDocumento] = useState("");
+  
   const [erroEnvio, setErroEnvio] = useState<string | null>(null);
   const [concluido, setConcluido] = useState(false);
   const [pdfGeradoBase64, setPdfGeradoBase64] = useState<string | null>(null);
@@ -63,7 +63,6 @@ export default function AssinaturaPublica() {
 
       await submeter({
         nomeSignatario: nome,
-        documentoSignatario: documento || undefined,
         imagemAssinatura: assinaturaCliente,
         arquivoPdf: pdfBase64,
       });
@@ -126,11 +125,7 @@ export default function AssinaturaPublica() {
               </div>
 
               <Input label="Seu nome completo" value={nome} onChange={(e) => setNome(e.target.value)} />
-              <Input
-                label="CPF/CNPJ"
-                value={documento}
-                onChange={(e) => setDocumento(e.target.value)}
-              />
+             
 
               <div>
                 <p className="mb-1.5 text-sm font-medium text-neutral-700 dark:text-neutral-300">Sua assinatura</p>

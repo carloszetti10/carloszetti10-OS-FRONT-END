@@ -41,7 +41,6 @@ export function GerarRelatorioModal({ aberto, aoFechar, ordemServico }: GerarRel
   const [salvarComoPadrao, setSalvarComoPadrao] = useState(true);
   const [imagemFuncionarioUsada, setImagemFuncionarioUsada] = useState<string | null>(null);
   const [nomeCliente, setNomeCliente] = useState("");
-  const [documentoCliente, setDocumentoCliente] = useState("");
   const [erroAssinaturaCliente, setErroAssinaturaCliente] = useState<string | null>(null);
 
   const padFuncionarioRef = useRef<SignaturePadHandle>(null);
@@ -55,7 +54,6 @@ export function GerarRelatorioModal({ aberto, aoFechar, ordemServico }: GerarRel
       setEtapa("assinar-funcionario");
       setUsarAssinaturaSalva(temAssinaturaSalva);
       setNomeCliente("");
-      setDocumentoCliente("");
       setErroAssinaturaCliente(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -97,6 +95,7 @@ export function GerarRelatorioModal({ aberto, aoFechar, ordemServico }: GerarRel
 
     try {
       const documentoCadastrado = clientes?.find((c) => c.idCliente === ordemServico.idCliente)?.documento ?? "";
+      const dataFinal = new Date().toISOString();
       const pdfBytes = await gerarPdfOs({
         idOs: ordemServico.idOs,
         tituloOs: ordemServico.tituloOs,
@@ -104,22 +103,22 @@ export function GerarRelatorioModal({ aberto, aoFechar, ordemServico }: GerarRel
         nomeCliente: ordemServico.nomeCliente,
         documentoCliente: documentoCadastrado,
         dataHoraInicio: ordemServico.dataHoraInicio,
-        dataHoraFim: ordemServico.dataHoraFim,
+        dataHoraFim: dataFinal,
         descricao: ordemServico.descricao,
         relatorioTecnico: ordemServico.relatorioTecnico || "",
         nomeFuncionario: funcionarioLogado?.nome ?? "",
         assinaturaFuncionarioBase64: imagemFuncionarioUsada,
         nomeSignatarioCliente: nomeCliente,
         assinaturaClienteBase64: assinaturaCliente,
-        dataAssinaturaCliente: new Date().toISOString(),
+        dataAssinaturaCliente: dataFinal,
       });
       const pdfBase64 = uint8ArrayParaBase64(pdfBytes);
 
       await submeterCliente({
         nomeSignatario: nomeCliente,
-        documentoSignatario: documentoCliente || undefined,
         imagemAssinatura: assinaturaCliente,
         arquivoPdf: pdfBase64,
+        dataFinal: dataFinal, 
       });
 
       setEtapa("concluido-local");
@@ -218,11 +217,7 @@ export function GerarRelatorioModal({ aberto, aoFechar, ordemServico }: GerarRel
           </button>
 
           <Input label="Nome do cliente" value={nomeCliente} onChange={(e) => setNomeCliente(e.target.value)} />
-          <Input
-            label="CPF/CNPJ (opcional)"
-            value={documentoCliente}
-            onChange={(e) => setDocumentoCliente(e.target.value)}
-          />
+         
 
           <div>
             <p className="mb-1.5 text-sm font-medium text-neutral-700 dark:text-neutral-300">Assinatura do cliente</p>
