@@ -31,23 +31,105 @@ const LARGURA_PAGINA = 595.28;
 const ALTURA_PAGINA = 841.89;
 const LARGURA_UTIL = LARGURA_PAGINA - MARGEM * 2;
 
+// Espaço reservado no rodapé — nenhum conteúdo pode invadir essa faixa.
+const RODAPE_ALTURA = 52;
+// Topo livre em páginas de continuação (sem o cabeçalho com logo).
+const TOPO_PAGINA_CONTINUACAO = ALTURA_PAGINA - 56;
+
+/** "Cursor" de escrita: página atual + posição Y. Fica mais fácil de passar
+ *  adiante entre as funções de desenho do que ficar repassando (page, y). */
+interface ContextoPdf {
+  pdfDoc: PDFDocument;
+  page: PDFPage;
+  y: number;
+}
+
 /**
  * Monta o PDF da OS com um layout próprio (não replica o modelo .docx):
  * cabeçalho com logo + título + código da OS, um bloco de dados em
  * "cards" (cliente/documento/tipo/datas), descrição, relatório técnico e,
  * por fim, as assinaturas — Cliente à esquerda, Consultor à direita.
+ *
+ * Suporta múltiplas páginas: se a descrição e/ou o relatório técnico forem
+ * longos, o texto continua automaticamente em novas páginas (nunca é
+ * cortado/truncado), e as assinaturas ficam sempre juntas — se não couber
+ * espaço suficiente pra elas na página atual, pulam inteiras pra próxima.
+ *
  * Roda 100% no navegador (pdf-lib).
  */
 export async function gerarPdfOs(dados: DadosPdfOs): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([LARGURA_PAGINA, ALTURA_PAGINA]);
   const fonte = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fonteNegrito = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-
-  let y = ALTURA_PAGINA - 44;
-
-  // ===== Cabeçalho: logo + título + código da OS =====
   const logo = await pdfDoc.embedPng(await carregarLogoPdf());
+
+  const ctx: ContextoPdf = {
+    pdfDoc,
+    page: pdfDoc.addPage([LARGURA_PAGINA, ALTURA_PAGINA]),
+    y: 0,
+  };
+
+  desenharCabecalho(ctx, fonte, fonteNegrito, logo, dados);
+  desenharGridDados(ctx, fonteNegrito, dados);
+
+  desenharSecaoTexto(ctx, fonte, fonteNegrito, "DESCRIÇÃO", dados.descricao || "Sem descrição informada.");
+  desenharSecaoTexto(ctx, fonte, fonteNegrito, "RELATÓRIO TÉCNICO", dados.relatorioTecnico || "—");
+
+  // ===== Assinaturas — reservam o próprio espaço, nunca são cortadas =====
+  const ALTURA_BLOCO_ASSINATURA = 95; // do topo (imagem) até a data, com folga
+  garantirEspaco(ctx, ALTURA_BLOCO_ASSINATURA);
+
+  const yAssinatura = ctx.y - 74; // mantém a mesma geometria relativa que desenharAssinatura já espera
+  const larguraColuna = LARGURA_UTIL / 2 - 14;
+
+  await desenharAssinatura(pdfDoc, ctx.page, fonte, fonteNegrito, {
+    x: MARGEM,
+    y: yAssinatura,
+    largura: larguraColuna,
+    rotulo: "Cliente",
+    nome: dados.nomeSignatarioCliente || dados.nomeCliente,
+    assinaturaBase64: dados.assinaturaClienteBase64,
+    dataAssinatura: dados.dataAssinaturaCliente,
+  });
+
+  await desenharAssinatura(pdfDoc, ctx.page, fonte, fonteNegrito, {
+    x: MARGEM + larguraColuna + 28,
+    y: yAssinatura,
+    largura: larguraColuna,
+    rotulo: "Consultor",
+    nome: dados.nomeFuncionario,
+    assinaturaBase64: dados.assinaturaFuncionarioBase64,
+    dataAssinatura: null,
+  });
+
+  desenharRodapeEmTodasPaginas(pdfDoc, fonte);
+
+  return pdfDoc.save();
+}
+
+/** Cria uma página nova e reposiciona o cursor no topo dela. */
+function novaPagina(ctx: ContextoPdf): void {
+  ctx.page = ctx.pdfDoc.addPage([LARGURA_PAGINA, ALTURA_PAGINA]);
+  ctx.y = TOPO_PAGINA_CONTINUACAO;
+}
+
+/** Se não sobrar `altura` pontos antes do rodapé, pula pra uma página nova. */
+function garantirEspaco(ctx: ContextoPdf, altura: number, limiteInferior = RODAPE_ALTURA): void {
+  if (ctx.y - altura < limiteInferior) {
+    novaPagina(ctx);
+  }
+}
+
+function desenharCabecalho(
+  ctx: ContextoPdf,
+  fonte: PDFFont,
+  fonteNegrito: PDFFont,
+  logo: Awaited<ReturnType<PDFDocument["embedPng"]>>,
+  dados: DadosPdfOs
+): void {
+  let y = ALTURA_PAGINA - 44;
+  const page = ctx.page;
+
   const logoLargura = 108;
   const logoAltura = (logo.height / logo.width) * logoLargura;
   page.drawImage(logo, { x: MARGEM, y: y - logoAltura + 6, width: logoLargura, height: logoAltura });
@@ -66,12 +148,9 @@ export async function gerarPdfOs(dados: DadosPdfOs): Promise<Uint8Array> {
   });
 
   y -= Math.max(logoAltura + 4, 34);
-
-  // Linha divisória verde
   page.drawLine({ start: { x: MARGEM, y }, end: { x: LARGURA_PAGINA - MARGEM, y }, thickness: 2, color: VERDE });
   y -= 26;
 
-  // Título da OS
   page.drawText(dados.tituloOs || "Ordem de Serviço", {
     x: MARGEM,
     y,
@@ -81,8 +160,10 @@ export async function gerarPdfOs(dados: DadosPdfOs): Promise<Uint8Array> {
   });
   y -= 28;
 
-  // ===== Bloco de dados em "cards" (2 colunas x 3 linhas) =====
-  const colunaLargura = (LARGURA_UTIL - 16) / 2;
+  ctx.y = y;
+}
+
+function desenharGridDados(ctx: ContextoPdf, fonteNegrito: PDFFont, dados: DadosPdfOs): void {
   const { data: dataInicio, hora: horaInicio } = separarDataHora(dados.dataHoraInicio);
   const { data: dataFim, hora: horaFim } = separarDataHora(dados.dataHoraFim);
 
@@ -95,9 +176,16 @@ export async function gerarPdfOs(dados: DadosPdfOs): Promise<Uint8Array> {
   const alturaLinhaGrid = 40;
   const alturaCaixaGrid = linhasGrid.length * alturaLinhaGrid + 20;
 
+  // Grid não paginado internamente (sempre tem tamanho fixo) — só garante
+  // que, se estiver perto do fim da página, ela inteira pula pra próxima.
+  garantirEspaco(ctx, alturaCaixaGrid + 22);
+
+  const colunaLargura = (LARGURA_UTIL - 16) / 2;
+  const page = ctx.page;
+
   page.drawRectangle({
     x: MARGEM,
-    y: y - alturaCaixaGrid,
+    y: ctx.y - alturaCaixaGrid,
     width: LARGURA_UTIL,
     height: alturaCaixaGrid,
     color: CINZA_FUNDO,
@@ -105,106 +193,59 @@ export async function gerarPdfOs(dados: DadosPdfOs): Promise<Uint8Array> {
     borderWidth: 1,
   });
 
-  let yGrid = y - 22;
+  let yGrid = ctx.y - 22;
   for (const [rotulo1, valor1, rotulo2, valor2] of linhasGrid) {
-    desenharCelula(page,  fonteNegrito, MARGEM + 16, yGrid, rotulo1, valor1);
-    desenharCelula(page,  fonteNegrito, MARGEM + 16 + colunaLargura + 16, yGrid, rotulo2, valor2);
+    desenharCelula(page, fonteNegrito, MARGEM + 16, yGrid, rotulo1, valor1);
+    desenharCelula(page, fonteNegrito, MARGEM + 16 + colunaLargura + 16, yGrid, rotulo2, valor2);
     yGrid -= alturaLinhaGrid;
   }
 
-  y -= alturaCaixaGrid + 22;
-
-  // ===== Descrição =====
-  y = desenharSecaoTexto(page, fonte, fonteNegrito, y, "DESCRIÇÃO", dados.descricao || "Sem descrição informada.");
-  y -= 18;
-
-  // ===== Relatório técnico =====
-  y = desenharSecaoTexto(page, fonte, fonteNegrito, y, "RELATÓRIO TÉCNICO", dados.relatorioTecnico || "—", Math.max(y - 175, 170));
-
-  // ===== Assinaturas =====
-  const yAssinatura = 130;
-  const larguraColuna = LARGURA_UTIL / 2 - 14;
-
-  await desenharAssinatura(pdfDoc, page, fonte, fonteNegrito, {
-    x: MARGEM,
-    y: yAssinatura,
-    largura: larguraColuna,
-    rotulo: "Cliente",
-    nome: dados.nomeSignatarioCliente || dados.nomeCliente,
-    assinaturaBase64: dados.assinaturaClienteBase64,
-    dataAssinatura: dados.dataAssinaturaCliente,
-  });
-
-  await desenharAssinatura(pdfDoc, page, fonte, fonteNegrito, {
-    x: MARGEM + larguraColuna + 28,
-    y: yAssinatura,
-    largura: larguraColuna,
-    rotulo: "Consultor",
-    nome: dados.nomeFuncionario,
-    assinaturaBase64: dados.assinaturaFuncionarioBase64,
-    dataAssinatura: null,
-  });
-
-  // Rodapé
-  const rodape = `Documento gerado eletronicamente pelo NorteSys OS em ${new Date().toLocaleString("pt-BR")}`;
-  const rodapeLargura = fonte.widthOfTextAtSize(rodape, 7.5);
-  page.drawText(rodape, {
-    x: (LARGURA_PAGINA - rodapeLargura) / 2,
-    y: 34,
-    size: 7.5,
-    font: fonte,
-    color: CINZA_LABEL,
-  });
-
-  return pdfDoc.save();
+  ctx.y -= alturaCaixaGrid + 22;
 }
 
-function desenharCelula(
-  page: PDFPage,
-  //fonte: PDFFont,
-  fonteNegrito: PDFFont,
-  x: number,
-  y: number,
-  rotulo: string,
-  valor: string
-) {
+function desenharCelula(page: PDFPage, fonteNegrito: PDFFont, x: number, y: number, rotulo: string, valor: string) {
   page.drawText(rotulo, { x, y, size: 8, font: fonteNegrito, color: CINZA_LABEL });
   const valorExibido = valor.length > 46 ? valor.slice(0, 43) + "…" : valor;
   page.drawText(valorExibido, { x, y: y - 15, size: 11, font: fonteNegrito, color: CINZA_ESCURO });
 }
 
 /**
- * Desenha um título de seção (verde) + o texto com quebra de linha automática.
- * Se `alturaMinimaRestante` for passado, o texto é cortado (com reticências)
- * pra nunca invadir a área reservada das assinaturas.
+ * Desenha um título de seção (verde) + o texto com quebra de linha
+ * automática. Se o texto não couber no espaço restante da página, o
+ * desenho continua sozinho em quantas páginas novas forem necessárias —
+ * sem truncar nada.
  */
-function desenharSecaoTexto(
-  page: PDFPage,
-  fonte: PDFFont,
-  fonteNegrito: PDFFont,
-  yInicial: number,
-  titulo: string,
-  texto: string,
-  limiteInferior = 170
-): number {
-  let y = yInicial;
-  page.drawText(titulo, { x: MARGEM, y, size: 10.5, font: fonteNegrito, color: VERDE_ESCURO });
-  y -= 6;
-  page.drawLine({ start: { x: MARGEM, y }, end: { x: MARGEM + LARGURA_UTIL, y }, thickness: 0.75, color: CINZA_BORDA });
-  y -= 16;
+function desenharSecaoTexto(ctx: ContextoPdf, fonte: PDFFont, fonteNegrito: PDFFont, titulo: string, texto: string): void {
+  // Reserva espaço pro título + a linha divisória + pelo menos 1 linha de
+  // texto, senão já pula de página ANTES do título (evita título "órfão"
+  // sozinho no fim de uma página).
+  garantirEspaco(ctx, 16 + 14);
 
-  const linhas = quebrarLinhas(texto, fonte, 10, LARGURA_UTIL);
-  for (const linha of linhas) {
-    if (y < limiteInferior) {
-      page.drawText("…", { x: MARGEM, y, size: 10, font: fonte, color: CINZA_TEXTO });
-      y -= 14;
-      break;
+  ctx.page.drawText(titulo, { x: MARGEM, y: ctx.y, size: 10.5, font: fonteNegrito, color: VERDE_ESCURO });
+  ctx.y -= 6;
+  ctx.page.drawLine({ start: { x: MARGEM, y: ctx.y }, end: { x: MARGEM + LARGURA_UTIL, y: ctx.y }, thickness: 0.75, color: CINZA_BORDA });
+  ctx.y -= 16;
+
+  const paragrafos = texto.replace(/\r/g, "").split(/\n/);
+  paragrafos.forEach((paragrafo, indice) => {
+    // Linha em branco digitada pelo técnico (parágrafo) = respiro extra no PDF.
+    if (paragrafo.trim() === "") {
+      if (indice > 0 && indice < paragrafos.length - 1) {
+        garantirEspaco(ctx, 8);
+        ctx.y -= 8;
+      }
+      return;
     }
-    page.drawText(linha, { x: MARGEM, y, size: 10, font: fonte, color: CINZA_TEXTO });
-    y -= 14;
-  }
 
-  return y;
+    const linhas = quebrarLinhas(paragrafo, fonte, 10, LARGURA_UTIL);
+    for (const linha of linhas) {
+      garantirEspaco(ctx, 14);
+      ctx.page.drawText(linha, { x: MARGEM, y: ctx.y, size: 10, font: fonte, color: CINZA_TEXTO });
+      ctx.y -= 14;
+    }
+  });
+
+  ctx.y -= 18; // respiro depois da seção
 }
 
 async function desenharAssinatura(
@@ -224,9 +265,6 @@ async function desenharAssinatura(
 ) {
   const { x, y, largura, rotulo, nome, assinaturaBase64, dataAssinatura } = opcoes;
 
-  // Sem caixa ao redor — só a assinatura "flutuando" acima da linha, no
-  // mesmo espírito visual de um DocuSign/Clicksign: mais limpo, sem parecer
-  // um formulário impresso preenchido à mão.
   if (assinaturaBase64) {
     try {
       const png = await pdfDoc.embedPng(base64ParaUint8Array(assinaturaBase64));
@@ -245,7 +283,6 @@ async function desenharAssinatura(
     }
   }
 
-  // Linha fina na cor da marca, em vez de uma caixa fechada
   page.drawLine({ start: { x, y: y + 22 }, end: { x: x + largura, y: y + 22 }, thickness: 1.2, color: VERDE });
 
   const rotuloLargura = fonteNegrito.widthOfTextAtSize(rotulo, 10.5);
@@ -260,6 +297,27 @@ async function desenharAssinatura(
     const textoLargura = fonte.widthOfTextAtSize(texto, 7.5);
     page.drawText(texto, { x: x + (largura - textoLargura) / 2, y: y - 17, size: 7.5, font: fonte, color: CINZA_LABEL });
   }
+}
+
+/** Desenha o rodapé em TODAS as páginas geradas, já com "Página X de Y" quando há mais de uma. */
+function desenharRodapeEmTodasPaginas(pdfDoc: PDFDocument, fonte: PDFFont): void {
+  const paginas = pdfDoc.getPages();
+  const timestamp = new Date().toLocaleString("pt-BR");
+
+  paginas.forEach((pagina, indice) => {
+    const rodape =
+      paginas.length > 1
+        ? `Documento gerado eletronicamente pelo NorteSys OS em ${timestamp} — Página ${indice + 1} de ${paginas.length}`
+        : `Documento gerado eletronicamente pelo NorteSys OS em ${timestamp}`;
+    const rodapeLargura = fonte.widthOfTextAtSize(rodape, 7.5);
+    pagina.drawText(rodape, {
+      x: (LARGURA_PAGINA - rodapeLargura) / 2,
+      y: 34,
+      size: 7.5,
+      font: fonte,
+      color: CINZA_LABEL,
+    });
+  });
 }
 
 function separarDataHora(iso?: string | null): { data: string; hora: string } {
