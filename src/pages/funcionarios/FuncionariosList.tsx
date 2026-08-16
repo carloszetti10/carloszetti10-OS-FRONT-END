@@ -78,44 +78,77 @@ export default function FuncionariosList() {
             acao={<Button onClick={abrirNovo} size="sm"><Plus className="h-4 w-4" /> Novo funcionário</Button>}
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-neutral-100 text-xs uppercase text-neutral-400 dark:border-neutral-800">
-                  <th className="py-2.5 pr-2">ID</th>
-                  <th className="py-2.5 pr-2">Nome</th>
-                  <th className="py-2.5 pr-2">Usuário</th>
-                  <th className="py-2.5 pr-2">E-mail</th>
-                  <th className="py-2.5 pr-2">Status</th>
-                  <th className="py-2.5 pr-2 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {listaPagina.map((f) => (
-                  <tr key={f.id} className="border-b border-neutral-50 last:border-0 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-800/50">
-                    <td className="py-3 pr-2 text-neutral-400">#{f.id}</td>
-                    <td className="py-3 pr-2">
-                      <div className="flex items-center gap-2 font-medium">
-                        <Avatar nome={f.nome} className="h-7 w-7 text-xs" />
-                        {f.nome}
+          <div>
+            {/* Tablets e celulares: lista de cartões, mais fácil de ler que uma tabela larga */}
+            <div className="space-y-2 lg:hidden">
+              {listaPagina.map((f) => (
+                <div
+                  key={f.id}
+                  className="rounded-xl border border-neutral-100 p-3 dark:border-neutral-800"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Avatar nome={f.nome} className="h-8 w-8 shrink-0 text-xs" />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{f.nome}</p>
+                        <p className="truncate text-sm text-neutral-500 dark:text-neutral-400">{f.email}</p>
                       </div>
-                    </td>
-                    <td className="py-3 pr-2 text-neutral-600 dark:text-neutral-300">{f.userName}</td>
-                    <td className="py-3 pr-2 text-neutral-600 dark:text-neutral-300">{f.email}</td>
-                    <td className="py-3 pr-2">
-                      <Badge cor={f.ativo ? "verde" : "cinza"}>{f.ativo ? "Ativo" : "Inativo"}</Badge>
-                    </td>
-                    <td className="py-3 pr-2">
-                      <div className="flex justify-end">
-                        <button onClick={() => abrirEdicao(f)} className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-brand-600 dark:hover:bg-neutral-800" title="Editar">
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
+                    </div>
+                    <Badge cor={f.ativo ? "verde" : "cinza"}>{f.ativo ? "Ativo" : "Inativo"}</Badge>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-neutral-50 pt-2 dark:border-neutral-800">
+                    <span className="truncate text-xs text-neutral-400">
+                      #{f.id} · {f.userName}
+                    </span>
+                    <button onClick={() => abrirEdicao(f)} className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-brand-600 dark:hover:bg-neutral-800" title="Editar">
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Telas grandes: tabela normal */}
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-neutral-100 text-xs uppercase text-neutral-400 dark:border-neutral-800">
+                    <th className="py-2.5 pr-2">ID</th>
+                    <th className="py-2.5 pr-2">Nome</th>
+                    <th className="py-2.5 pr-2">Usuário</th>
+                    <th className="py-2.5 pr-2">E-mail</th>
+                    <th className="py-2.5 pr-2">Status</th>
+                    <th className="py-2.5 pr-2 text-right">Ações</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {listaPagina.map((f) => (
+                    <tr key={f.id} className="border-b border-neutral-50 last:border-0 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-800/50">
+                      <td className="py-3 pr-2 text-neutral-400">#{f.id}</td>
+                      <td className="py-3 pr-2">
+                        <div className="flex items-center gap-2 font-medium">
+                          <Avatar nome={f.nome} className="h-7 w-7 text-xs" />
+                          {f.nome}
+                        </div>
+                      </td>
+                      <td className="py-3 pr-2 text-neutral-600 dark:text-neutral-300">{f.userName}</td>
+                      <td className="py-3 pr-2 text-neutral-600 dark:text-neutral-300">{f.email}</td>
+                      <td className="py-3 pr-2">
+                        <Badge cor={f.ativo ? "verde" : "cinza"}>{f.ativo ? "Ativo" : "Inativo"}</Badge>
+                      </td>
+                      <td className="py-3 pr-2">
+                        <div className="flex justify-end">
+                          <button onClick={() => abrirEdicao(f)} className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-brand-600 dark:hover:bg-neutral-800" title="Editar">
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

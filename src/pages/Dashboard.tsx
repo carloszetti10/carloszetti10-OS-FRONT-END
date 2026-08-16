@@ -39,8 +39,8 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold">Dashboard</h1>
-          <p className="text-sm text-neutral-500">Visão geral das suas ordens de serviço</p>
+          <h1 className="font-display text-2xl font-bold">Visão geral</h1>
+          <p>Estatísticas das suas OS.</p>
         </div>
         <Link to="/ordens-servico?nova=1">
           <Button>

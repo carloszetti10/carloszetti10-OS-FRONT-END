@@ -115,45 +115,85 @@ export default function ClientesList() {
             acao={<Button onClick={abrirNovo} size="sm"><Plus className="h-4 w-4" /> Novo cliente</Button>}
           />
         ) : (
-          <div className={`overflow-x-auto transition-opacity ${isFetching ? "opacity-60" : ""}`}>
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-neutral-100 text-xs uppercase text-neutral-400 dark:border-neutral-800">
-                  <th className="py-2.5 pr-2">ID</th>
-                  <th className="py-2.5 pr-2">Nome</th>
-                  <th className="py-2.5 pr-2">Tipo</th>
-                  <th className="py-2.5 pr-2">Documento</th>
-                  <th className="py-2.5 pr-2">Contato</th>
-                  <th className="py-2.5 pr-2 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clientes.map((c) => (
-                  <tr key={c.idCliente} className="border-b border-neutral-50 last:border-0 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-800/50">
-                    <td className="py-3 pr-2 text-neutral-400">#{c.idCliente}</td>
-                    <td className="py-3 pr-2 font-medium">{c.nomeFantasia}</td>
-                    <td className="py-3 pr-2">
-                      <div className="flex flex-wrap gap-1">
-                        <Badge cor="cinza">{TIPO_PESSOA_LABEL[c.tipoPessoa]}</Badge>
-                        {!c.ativo && <Badge cor="vermelho">Inativo</Badge>}
-                      </div>
-                    </td>
-                    <td className="py-3 pr-2 text-neutral-600 dark:text-neutral-300">{c.documento}</td>
-                    <td className="py-3 pr-2 text-neutral-600 dark:text-neutral-300">{c.telefone || c.email || "—"}</td>
-                    <td className="py-3 pr-2">
-                      <div className="flex justify-end gap-1">
-                        <button onClick={() => abrirEdicao(c)} className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-brand-600 dark:hover:bg-neutral-800" title="Editar">
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => setClienteParaExcluir(c)} className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950" title="Excluir">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
+          <div className={`transition-opacity ${isFetching ? "opacity-60" : ""}`}>
+            {/* Tablets e celulares: lista de cartões, mais fácil de ler que uma tabela larga */}
+            <div className="space-y-2 lg:hidden">
+              {clientes.map((c) => (
+                <div
+                  key={c.idCliente}
+                  className="rounded-xl border border-neutral-100 p-3 dark:border-neutral-800"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{c.nomeFantasia}</p>
+                      <p className="mt-0.5 truncate text-sm text-neutral-500 dark:text-neutral-400">
+                        {c.documento}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap justify-end gap-1">
+                      <Badge cor="cinza">{TIPO_PESSOA_LABEL[c.tipoPessoa]}</Badge>
+                      {!c.ativo && <Badge cor="vermelho">Inativo</Badge>}
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-neutral-50 pt-2 dark:border-neutral-800">
+                    <span className="truncate text-xs text-neutral-400">
+                      #{c.idCliente} · {c.telefone || c.email || "—"}
+                    </span>
+                    <div className="flex gap-1">
+                      <button onClick={() => abrirEdicao(c)} className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-brand-600 dark:hover:bg-neutral-800" title="Editar">
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => setClienteParaExcluir(c)} className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950" title="Excluir">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Telas grandes: tabela normal */}
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-neutral-100 text-xs uppercase text-neutral-400 dark:border-neutral-800">
+                    <th className="py-2.5 pr-2">ID</th>
+                    <th className="py-2.5 pr-2">Nome</th>
+                    <th className="py-2.5 pr-2">Tipo</th>
+                    <th className="py-2.5 pr-2">Documento</th>
+                    <th className="py-2.5 pr-2">Contato</th>
+                    <th className="py-2.5 pr-2 text-right">Ações</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {clientes.map((c) => (
+                    <tr key={c.idCliente} className="border-b border-neutral-50 last:border-0 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-800/50">
+                      <td className="py-3 pr-2 text-neutral-400">#{c.idCliente}</td>
+                      <td className="py-3 pr-2 font-medium">{c.nomeFantasia}</td>
+                      <td className="py-3 pr-2">
+                        <div className="flex flex-wrap gap-1">
+                          <Badge cor="cinza">{TIPO_PESSOA_LABEL[c.tipoPessoa]}</Badge>
+                          {!c.ativo && <Badge cor="vermelho">Inativo</Badge>}
+                        </div>
+                      </td>
+                      <td className="py-3 pr-2 text-neutral-600 dark:text-neutral-300">{c.documento}</td>
+                      <td className="py-3 pr-2 text-neutral-600 dark:text-neutral-300">{c.telefone || c.email || "—"}</td>
+                      <td className="py-3 pr-2">
+                        <div className="flex justify-end gap-1">
+                          <button onClick={() => abrirEdicao(c)} className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-brand-600 dark:hover:bg-neutral-800" title="Editar">
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => setClienteParaExcluir(c)} className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950" title="Excluir">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

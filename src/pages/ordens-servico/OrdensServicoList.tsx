@@ -140,7 +140,7 @@ export default function OrdensServicoList() {
         <div>
           <h1 className="font-display text-2xl font-bold">Ordens de Serviço</h1>
           <p className="text-sm text-neutral-500">
-            Mostrando as OS às quais você está vinculado como funcionário.
+            Listagem de OS.
           </p>
         </div>
         <Button onClick={abrirModal}>
@@ -287,62 +287,122 @@ export default function OrdensServicoList() {
             acao={<Button onClick={abrirModal} size="sm"><Plus className="h-4 w-4" /> Nova OS</Button>}
           />
         ) : (
-          <div className={`overflow-x-auto transition-opacity ${isFetching ? "opacity-60" : ""}`}>
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-neutral-100 text-xs uppercase text-neutral-400 dark:border-neutral-800">
-                  <th className="py-2.5 pr-2">ID</th>
-                  <th className="py-2.5 pr-2">Título</th>
-                  <th className="py-2.5 pr-2">Cliente</th>
-                  <th className="py-2.5 pr-2">Status</th>
-                  <th className="py-2.5 pr-2">Prazo</th>
-                  <th className="py-2.5 pr-2 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ordens.map((os) => (
-                  <tr key={os.idOs} className="border-b border-neutral-50 last:border-0 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-800/50">
-                    <td className="py-3 pr-2 text-neutral-400">#{os.idOs}</td>
-                    <td className="py-3 pr-2 font-medium">
-                      <Link to={`/ordens-servico/${os.idOs}`} className="hover:text-brand-600">
+          <div className={`transition-opacity ${isFetching ? "opacity-60" : ""}`}>
+            {/* Tablets e celulares: lista de cartões, mais fácil de ler que uma tabela larga */}
+            <div className="space-y-2 lg:hidden">
+              {ordens.map((os) => (
+                <div
+                  key={os.idOs}
+                  className="rounded-xl border border-neutral-100 p-3 dark:border-neutral-800"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <Link
+                        to={`/ordens-servico/${os.idOs}`}
+                        className="block truncate font-medium hover:text-brand-600"
+                      >
                         {os.tituloOs}
                       </Link>
-                    </td>
-                    <td className="py-3 pr-2 text-neutral-600 dark:text-neutral-300">{os.nomeCliente}</td>
-                    <td className="py-3 pr-2"><StatusOsBadge status={os.status} /></td>
-                    <td className="py-3 pr-2 text-neutral-600 dark:text-neutral-300">{formatarData(os.prazo)}</td>
-                    <td className="py-3 pr-2">
-                      <div className="flex justify-end gap-1">
-                        {os.possuiPdfAssinado && (
-                          <button
-                            onClick={() => aoAbrirPdf(os.idOs)}
-                            disabled={baixandoPdfId === os.idOs}
-                            className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-brand-600 disabled:opacity-50 dark:hover:bg-neutral-800"
-                            title="Ver PDF"
-                          >
-                            <FileDown className="h-4 w-4" />
-                          </button>
-                        )}
-                        <Link
-                          to={`/ordens-servico/${os.idOs}`}
-                          className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-brand-600 dark:hover:bg-neutral-800"
-                          title="Visualizar"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Link>
+                      <p className="mt-0.5 truncate text-sm text-neutral-500 dark:text-neutral-400">
+                        {os.nomeCliente}
+                      </p>
+                    </div>
+                    <StatusOsBadge status={os.status} />
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-neutral-50 pt-2 dark:border-neutral-800">
+                    <span className="text-xs text-neutral-400">
+                      #{os.idOs} · Prazo: {formatarData(os.prazo)}
+                    </span>
+                    <div className="flex gap-1">
+                      {os.possuiPdfAssinado && (
                         <button
-                          onClick={() => setOsParaExcluir(os)}
-                          className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
-                          title="Excluir"
+                          onClick={() => aoAbrirPdf(os.idOs)}
+                          disabled={baixandoPdfId === os.idOs}
+                          className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-brand-600 disabled:opacity-50 dark:hover:bg-neutral-800"
+                          title="Ver PDF"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <FileDown className="h-4 w-4" />
                         </button>
-                      </div>
-                    </td>
+                      )}
+                      <Link
+                        to={`/ordens-servico/${os.idOs}`}
+                        className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-brand-600 dark:hover:bg-neutral-800"
+                        title="Visualizar"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                      <button
+                        onClick={() => setOsParaExcluir(os)}
+                        className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
+                        title="Excluir"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Telas grandes: tabela normal */}
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-neutral-100 text-xs uppercase text-neutral-400 dark:border-neutral-800">
+                    <th className="py-2.5 pr-2">ID</th>
+                    <th className="py-2.5 pr-2">Título</th>
+                    <th className="py-2.5 pr-2">Cliente</th>
+                    <th className="py-2.5 pr-2">Status</th>
+                    <th className="py-2.5 pr-2">Prazo</th>
+                    <th className="py-2.5 pr-2 text-right">Ações</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {ordens.map((os) => (
+                    <tr key={os.idOs} className="border-b border-neutral-50 last:border-0 hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-neutral-800/50">
+                      <td className="py-3 pr-2 text-neutral-400">#{os.idOs}</td>
+                      <td className="py-3 pr-2 font-medium">
+                        <Link to={`/ordens-servico/${os.idOs}`} className="hover:text-brand-600">
+                          {os.tituloOs}
+                        </Link>
+                      </td>
+                      <td className="py-3 pr-2 text-neutral-600 dark:text-neutral-300">{os.nomeCliente}</td>
+                      <td className="py-3 pr-2"><StatusOsBadge status={os.status} /></td>
+                      <td className="py-3 pr-2 text-neutral-600 dark:text-neutral-300">{formatarData(os.prazo)}</td>
+                      <td className="py-3 pr-2">
+                        <div className="flex justify-end gap-1">
+                          {os.possuiPdfAssinado && (
+                            <button
+                              onClick={() => aoAbrirPdf(os.idOs)}
+                              disabled={baixandoPdfId === os.idOs}
+                              className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-brand-600 disabled:opacity-50 dark:hover:bg-neutral-800"
+                              title="Ver PDF"
+                            >
+                              <FileDown className="h-4 w-4" />
+                            </button>
+                          )}
+                          <Link
+                            to={`/ordens-servico/${os.idOs}`}
+                            className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-100 hover:text-brand-600 dark:hover:bg-neutral-800"
+                            title="Visualizar"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Link>
+                          <button
+                            onClick={() => setOsParaExcluir(os)}
+                            className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950"
+                            title="Excluir"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
