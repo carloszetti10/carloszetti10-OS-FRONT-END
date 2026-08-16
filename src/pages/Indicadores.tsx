@@ -24,8 +24,7 @@ export default function Indicadores() {
   });
 
   // Sem a permissão OS.VisualizarTodas, o consultor só pode ver os próprios
-  // indicadores — o filtro fica travado no próprio funcionário e não pode
-  // ser trocado (mesma regra já aplicada no back, em IndicadoresRepository).
+  // indicadores 
   const podeVerTodas = usePodeVerTodasAsOs();
   const { data: funcionarioLogado, isLoading: carregandoFuncionarioLogado } = useFuncionarioLogado();
 
@@ -42,8 +41,7 @@ export default function Indicadores() {
     }
   }, [podeVerTodas, funcionarioLogado]);
 
-  // Mesma regra que existia no front antes de migrar: período considera a
-  // DATA DE CONCLUSÃO da OS (dataHoraFim), início do dia até o fim do dia.
+  // o período considera a DATA DE CONCLUSÃO da OS (dataHoraFim), início do dia até o fim do dia.
   const filtro = useMemo(
     () => ({
       idConsultor: idConsultor === "todos" ? undefined : Number(idConsultor),
@@ -77,9 +75,7 @@ export default function Indicadores() {
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-2xl font-bold">Indicadores</h1>
-        <p className="text-sm text-neutral-500">
-          Desempenho de conclusão das ordens de serviço por consultor e por período
-        </p>
+        <p>KPIs de desempenho.</p>
       </div>
 
       {/* Filtros */}

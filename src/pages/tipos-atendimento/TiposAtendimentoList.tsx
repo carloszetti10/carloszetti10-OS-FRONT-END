@@ -65,7 +65,7 @@ export default function TiposAtendimentoList() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold">Tipos de Atendimento</h1>
-          <p className="text-sm text-neutral-500">Categorias usadas ao criar uma Ordem de Serviço.</p>
+          <p className="text-sm text-neutral-500">Categorias usadas ao criar uma OS.</p>
         </div>
         <Button onClick={abrirNovo}>
           <Plus className="h-4 w-4" /> Novo tipo
