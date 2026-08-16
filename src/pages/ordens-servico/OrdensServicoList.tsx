@@ -163,14 +163,18 @@ export default function OrdensServicoList() {
             />
           </div>
 
-          <Select value={filtroStatus} onChange={(e) => { setFiltroStatus(e.target.value); setPagina(1); }}>
-            <option value="">Todos os status</option>
-            {Object.entries(STATUS_OS_LABEL).map(([valor, rotulo]) => (
-              <option key={valor} value={valor}>{rotulo}</option>
-            ))}
-          </Select>
+          {/* Nas telas de tablet/celular, esses dois filtros ficam dentro de "Mais filtros" (ver abaixo) */}
+          <div className="hidden lg:block">
+            <Select value={filtroStatus} onChange={(e) => { setFiltroStatus(e.target.value); setPagina(1); }}>
+              <option value="">Todos os status</option>
+              {Object.entries(STATUS_OS_LABEL).map(([valor, rotulo]) => (
+                <option key={valor} value={valor}>{rotulo}</option>
+              ))}
+            </Select>
+          </div>
 
-           <Select
+          <div className="hidden lg:block">
+            <Select
               value={filtroTipoAtendimento}
               onChange={(e) => { setFiltroTipoAtendimento(e.target.value); setPagina(1); }}
             >
@@ -179,6 +183,7 @@ export default function OrdensServicoList() {
                 <option key={t.id} value={t.id}>{t.descricao}</option>
               ))}
             </Select>
+          </div>
 
          {/*
           <Select value={filtroCliente} onChange={(e) => { setFiltroCliente(e.target.value); setPagina(1); }}>
@@ -219,7 +224,32 @@ export default function OrdensServicoList() {
 
         {mostrarMaisFiltros && (
           <div className="grid grid-cols-1 gap-3 rounded-xl bg-neutral-50 p-3 sm:grid-cols-2 lg:grid-cols-5 dark:bg-neutral-800/50">
-           
+            {/* Em telas de tablet/celular (abaixo de lg) esses filtros moram aqui em vez da barra principal */}
+            <div className="lg:hidden">
+              <Select
+                label="Status"
+                value={filtroStatus}
+                onChange={(e) => { setFiltroStatus(e.target.value); setPagina(1); }}
+              >
+                <option value="">Todos os status</option>
+                {Object.entries(STATUS_OS_LABEL).map(([valor, rotulo]) => (
+                  <option key={valor} value={valor}>{rotulo}</option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="lg:hidden">
+              <Select
+                label="Tipo de atendimento"
+                value={filtroTipoAtendimento}
+                onChange={(e) => { setFiltroTipoAtendimento(e.target.value); setPagina(1); }}
+              >
+                <option value="">Todos os tipos de atendimento</option>
+                {tiposAtendimento?.map((t) => (
+                  <option key={t.id} value={t.id}>{t.descricao}</option>
+                ))}
+              </Select>
+            </div>
 
             <Input
               type="date"
