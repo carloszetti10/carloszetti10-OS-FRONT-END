@@ -44,7 +44,7 @@ export function ClienteFormModal({ aberto, aoFechar, clienteEmEdicao }: ClienteF
         tipoPessoa: clienteEmEdicao.tipoPessoa,
         nomeFantasia: clienteEmEdicao.nomeFantasia ?? "",
         razaoSocial: clienteEmEdicao.razaoSocial ?? "",
-        documento: clienteEmEdicao.documento,
+        documento: mascararDocumento(clienteEmEdicao.documento),
         email: clienteEmEdicao.email ?? "",
         telefone: clienteEmEdicao.telefone ?? "",
         cep: clienteEmEdicao.cep,

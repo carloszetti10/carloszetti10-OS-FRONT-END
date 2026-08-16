@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { TelaCarregando } from "@/components/ui/Spinner";
 import { gerarPdfOs, uint8ArrayParaBase64, base64ParaUint8Array } from "@/utils/gerarPdfOs";
-import { formatarDataHora } from "@/utils/formatters";
+import { formatarDataHora, mascararDocumento } from "@/utils/formatters";
 import { extrairMensagemErro } from "@/utils/errorHandler";
 
 /**
@@ -113,7 +113,7 @@ export default function AssinaturaPublica() {
             <div className="space-y-4">
               <div className="space-y-1 text-sm">
                 <p className="font-medium">{dados.tituloOs}</p>
-                <p className="text-neutral-500">{dados.nomeCliente} · {dados.documentoCliente}</p>
+                <p className="text-neutral-500">{dados.nomeCliente} · {mascararDocumento(dados.documentoCliente)}</p>
                 <p className="text-neutral-500">
                   Início: {formatarDataHora(dados.dataHoraInicio)} · Consultor: {dados.nomeFuncionario}
                 </p>

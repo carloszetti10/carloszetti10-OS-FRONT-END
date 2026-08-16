@@ -15,6 +15,7 @@ import { TIPO_PESSOA_LABEL } from "@/types/enums";
 import type { Cliente, FiltroClientes } from "@/types/cliente";
 import { useToastStore } from "@/stores/toastStore";
 import { extrairMensagemErro } from "@/utils/errorHandler";
+import { mascararDocumento } from "@/utils/formatters";
 
 const TAMANHO_PAGINA = 10;
 
@@ -127,7 +128,7 @@ export default function ClientesList() {
                     <div className="min-w-0">
                       <p className="truncate font-medium">{c.nomeFantasia}</p>
                       <p className="mt-0.5 truncate text-sm text-neutral-500 dark:text-neutral-400">
-                        {c.documento}
+                        {mascararDocumento(c.documento)}
                       </p>
                     </div>
                     <div className="flex flex-wrap justify-end gap-1">
@@ -177,7 +178,7 @@ export default function ClientesList() {
                           {!c.ativo && <Badge cor="vermelho">Inativo</Badge>}
                         </div>
                       </td>
-                      <td className="py-3 pr-2 text-neutral-600 dark:text-neutral-300">{c.documento}</td>
+                      <td className="py-3 pr-2 text-neutral-600 dark:text-neutral-300">{mascararDocumento(c.documento)}</td>
                       <td className="py-3 pr-2 text-neutral-600 dark:text-neutral-300">{c.telefone || c.email || "—"}</td>
                       <td className="py-3 pr-2">
                         <div className="flex justify-end gap-1">
