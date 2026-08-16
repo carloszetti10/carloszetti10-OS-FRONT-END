@@ -60,16 +60,32 @@ export function mascararTelefone(valor: string): string {
 }
 
 /**
- * Formata uma duração em horas (número decimal) pro formato mais legível
- * possível: minutos (< 1h), horas com 1 decimal (< 24h) ou dias + horas (>= 24h).
- * Usado nos indicadores de tempo de conclusão de OS.
+ * Formata uma duração em horas (número decimal) sempre em horas e minutos
+ * (nunca decimal): minutos isolados (< 1h), horas + minutos (< 24h) ou
+ * dias + horas + minutos (>= 24h). Usado nos indicadores de tempo de
+ * conclusão de OS.
  */
 export function formatarDuracaoHoras(horas?: number | null): string {
-  if (horas === null || horas === undefined || Number.isNaN(horas)) return "—";
-  if (horas < 1) return `${Math.max(1, Math.round(horas * 60))} min`;
-  if (horas < 24) return `${horas.toFixed(1)} h`;
+  if (horas === null || horas === undefined || Number.isNaN(horas)) return "--";
 
-  const dias = Math.floor(horas / 24);
-  const horasRestantes = Math.round(horas % 24);
-  return horasRestantes > 0 ? `${dias}d ${horasRestantes}h` : `${dias}d`;
+  const totalMinutos = Math.round(horas * 60);
+  if (totalMinutos < 1) return "Menor que 1min";
+
+  if (horas < 24) {
+    const h = Math.floor(totalMinutos / 60);
+    const min = totalMinutos % 60;
+    if (h === 0) return `${min}min`;
+    return min > 0 ? `${h}h ${min}min` : `${h}h`;
+  }
+
+  const minutosPorDia = 60 * 24;
+  const dias = Math.floor(totalMinutos / minutosPorDia);
+  const restoMinutos = totalMinutos % minutosPorDia;
+  const horasRestantes = Math.floor(restoMinutos / 60);
+  const minutosRestantes = restoMinutos % 60;
+
+  const partes = [`${dias}d`];
+  if (horasRestantes > 0) partes.push(`${horasRestantes}h`);
+  if (minutosRestantes > 0) partes.push(`${minutosRestantes}min`);
+  return partes.join(" ");
 }
