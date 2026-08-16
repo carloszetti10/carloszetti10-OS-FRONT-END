@@ -1,8 +1,10 @@
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 import { CheckCircle2, Clock3, Gauge, RotateCcw } from "lucide-react";
 import { useIndicadores } from "@/hooks/useOrdensServico";
 import { useFuncionarios } from "@/hooks/useFuncionarios";
+import { useFuncionarioLogado } from "@/hooks/useFuncionarioLogado";
+import { usePodeVerTodasAsOs } from "@/hooks/usePermissoes";
 import { Card } from "@/components/ui/Card";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
@@ -21,9 +23,24 @@ export default function Indicadores() {
     somenteAtivos: true,
   });
 
+  // Sem a permissão OS.VisualizarTodas, o consultor só pode ver os próprios
+  // indicadores — o filtro fica travado no próprio funcionário e não pode
+  // ser trocado (mesma regra já aplicada no back, em IndicadoresRepository).
+  const podeVerTodas = usePodeVerTodasAsOs();
+  const { data: funcionarioLogado, isLoading: carregandoFuncionarioLogado } = useFuncionarioLogado();
+
   const [idConsultor, setIdConsultor] = useState("todos");
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
+
+  // Assim que soubermos quem é o funcionário logado, se ele não tiver a
+  // permissão, travamos o filtro nele mesmo (não dá pra escolher "todos"
+  // nem outro consultor).
+  useEffect(() => {
+    if (!podeVerTodas && funcionarioLogado) {
+      setIdConsultor(String(funcionarioLogado.id));
+    }
+  }, [podeVerTodas, funcionarioLogado]);
 
   // Mesma regra que existia no front antes de migrar: período considera a
   // DATA DE CONCLUSÃO da OS (dataHoraFim), início do dia até o fim do dia.
@@ -38,15 +55,20 @@ export default function Indicadores() {
 
   const { data: indicadores, isLoading: carregandoIndicadores } = useIndicadores(filtro);
 
-  const carregando = carregandoIndicadores || carregandoFuncionarios;
+  const carregando = carregandoIndicadores || carregandoFuncionarios || (!podeVerTodas && carregandoFuncionarioLogado);
 
-  const filtrosAtivos = idConsultor !== "todos" || !!dataInicio || !!dataFim;
+  const filtrosAtivos = (podeVerTodas && idConsultor !== "todos") || !!dataInicio || !!dataFim;
 
   function limparFiltros() {
-    setIdConsultor("todos");
+    if (podeVerTodas) setIdConsultor("todos");
     setDataInicio("");
     setDataFim("");
   }
+
+  // Sem a permissão, o consultor só enxerga a si mesmo na lista do seletor.
+  const opcoesFuncionarios = podeVerTodas
+    ? funcionarios
+    : funcionarios?.filter((f) => f.id === funcionarioLogado?.id);
 
   const porConsultor = indicadores?.porConsultor ?? [];
   const consultorMaisProdutivo = porConsultor[0];
@@ -67,9 +89,10 @@ export default function Indicadores() {
             label="Consultor"
             value={idConsultor}
             onChange={(e) => setIdConsultor(e.target.value)}
+            disabled={!podeVerTodas}
           >
-            <option value="todos">Todos os consultores</option>
-            {funcionarios?.map((f) => (
+            {podeVerTodas && <option value="todos">Todos os consultores</option>}
+            {opcoesFuncionarios?.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.nome}
               </option>
