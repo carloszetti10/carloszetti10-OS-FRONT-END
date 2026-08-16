@@ -98,10 +98,12 @@ export const ordemServicoService = {
     return data as Blob;
   },
 
-  // GET /api/OrdemServico/indicadores — agregados de desempenho por consultor/período.
+  // GET /api/Indicadores — agregados de desempenho por consultor/período.
   // A agregação (médias, agrupamento) é toda feita no back agora; o front só exibe.
+  // Endpoint migrou de /OrdemServico/indicadores (removido) para /Indicadores
+  // no IndicadoresController dedicado.
   obterIndicadores: async (filtro: FiltroIndicadores): Promise<Indicadores> => {
-    const { data } = await api.get<Indicadores>("/OrdemServico/indicadores", { params: filtro });
+    const { data } = await api.get<Indicadores>("/Indicadores", { params: filtro });
     return data;
   },
 };
