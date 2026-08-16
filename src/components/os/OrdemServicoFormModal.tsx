@@ -13,7 +13,7 @@ import { useClienteBusca } from "@/hooks/useClientes";
 import { useCriarOrdemServico } from "@/hooks/useOrdensServico";
 import { useToastStore } from "@/stores/toastStore";
 import { extrairMensagemErro } from "@/utils/errorHandler";
-import { paraIso } from "@/utils/formatters";
+import { paraIso, mascararDocumento } from "@/utils/formatters";
 
 interface OrdemServicoFormModalProps {
   aberto: boolean;
@@ -95,7 +95,7 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
               opcoes={(clientesEncontrados ?? []).map((c) => ({
                 value: c.idCliente,
                 label: c.nomeFantasia ?? c.razaoSocial ?? `Cliente #${c.idCliente}`,
-                sublabel: c.documento,
+                sublabel: mascararDocumento(c.documento),
               }))}
               valor={field.value}
               aoSelecionar={(v, opcao) => {
