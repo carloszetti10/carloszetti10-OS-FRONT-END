@@ -14,9 +14,7 @@ export interface BitrixListaResponse {
   result: BitrixItemBruto[];
 }
 
-// Espelha BitrixWebhookDto (POST /Bitrix/webhook). Não existe forma de obter
-// o "id" da configuração pelo front (nenhum GET devolve isso), então
-// PUT /Bitrix/webhook/{id} não é usado por essa tela.
+// Espelha BitrixWebhookDto (POST /Bitrix/webhook, PUT /Bitrix/webhook/{id}).
 export interface BitrixWebhookPayload {
   idFuncionario: number;
   webhookUrl: string;
@@ -29,4 +27,17 @@ export interface SalvarBitrixConfiguracaoPayload {
   idFuncionario: number;
   driveId: string;
   pastaId: string;
+}
+
+// Espelha BuscarBitrixConfiguracaoDto (GET /Bitrix/Configuracao?funcionarioId=).
+// driveId/pastaId são "string" no C#, mas o back usa o operador de supressão de
+// nulo (configuracao.DriveId!) — ou seja, se o funcionário já tem webhook mas
+// ainda não escolheu Drive/Pasta, esses campos chegam null de verdade em
+// tempo de execução, apesar do tipo declarado. Tipamos como string | null pra
+// refletir o comportamento real, não a assinatura do C#.
+export interface BuscarBitrixConfiguracao {
+  id: number;
+  idFuncionario: number;
+  driveId: string | null;
+  pastaId: string | null;
 }

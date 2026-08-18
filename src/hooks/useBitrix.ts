@@ -1,20 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { bitrixService } from "../services/bitrixService";
-import type { BitrixWebhookPayload, SalvarBitrixConfiguracaoPayload } from "../types/bitrix";
+import { bitrixService } from "@/services/bitrixService";
+import type { BitrixWebhookPayload, SalvarBitrixConfiguracaoPayload } from "@/types/bitrix";
 
-/**
- * Também funciona como o único sinal disponível de "esse funcionário já tem
- * webhook configurado?" — ver comentário em bitrixService.buscarDrives.
- * retry:false porque, quando o funcionário ainda não tem webhook, o erro é
- * esperado (não é uma falha passageira de rede) e tentar de novo só atrasa.
- */
-export function useDrivesBitrix(funcionarioId: number | null) {
+// Configuração real do funcionário (null = ainda não configurado). Fonte da
+// verdade pra tela toda: webhook, Drive e Pasta.
+export function useConfiguracaoBitrix(funcionarioId: number | null) {
+  return useQuery({
+    queryKey: ["bitrix-configuracao", funcionarioId],
+    queryFn: () => bitrixService.buscarConfiguracao(funcionarioId as number),
+    enabled: funcionarioId != null,
+  });
+}
+
+export function useDrivesBitrix(funcionarioId: number | null, habilitado: boolean) {
   return useQuery({
     queryKey: ["bitrix-drives", funcionarioId],
     queryFn: () => bitrixService.buscarDrives(funcionarioId as number),
-    enabled: funcionarioId != null,
+    enabled: funcionarioId != null && habilitado,
     select: (resposta) => resposta.result,
-    retry: false,
   });
 }
 
@@ -31,12 +34,22 @@ export function useCadastrarWebhookBitrix(funcionarioId: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: BitrixWebhookPayload) => bitrixService.cadastrarWebhook(payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["bitrix-drives", funcionarioId] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["bitrix-configuracao", funcionarioId] }),
   });
 }
 
-export function useSalvarConfiguracaoBitrix() {
+export function useAtualizarWebhookBitrix(funcionarioId: number, configuracaoId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: BitrixWebhookPayload) => bitrixService.atualizarWebhook(configuracaoId, payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["bitrix-configuracao", funcionarioId] }),
+  });
+}
+
+export function useSalvarConfiguracaoBitrix(funcionarioId: number) {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: SalvarBitrixConfiguracaoPayload) => bitrixService.salvarConfiguracao(payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["bitrix-configuracao", funcionarioId] }),
   });
 }
