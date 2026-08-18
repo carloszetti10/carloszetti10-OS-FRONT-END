@@ -9,6 +9,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   BarChart3,
+   Settings,
 } from "lucide-react";
 import { cn } from "@/utils/cn";
 import { usePodeGerenciarPermissoes } from "@/hooks/usePermissoes";
@@ -26,6 +27,7 @@ const ITENS_MENU = [
   { to: "/clientes", label: "Clientes", icon: Users },
   { to: "/funcionarios", label: "Funcionários", icon: UserCog },
   { to: "/tipos-atendimento", label: "Tipos de Atendimento", icon: Tags },
+  { to: "/configuracoes/bitrix", label: "Configuração Bitrix", icon: Settings },
 ];
 
 /** Menu lateral fixo, recolhível (vira ícone-only), e Drawer no mobile (ver DashboardLayout) */
