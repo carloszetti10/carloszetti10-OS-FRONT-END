@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { bitrixService } from "@/services/bitrixService";
-import type { BitrixWebhookPayload, SalvarBitrixConfiguracaoPayload } from "@/types/bitrix";
+import type { BitrixWebhookPayload, SalvarBitrixConfiguracaoPayload, TipoEnvioBitrix } from "@/types/bitrix";
 
 // Configuração real do funcionário (null = ainda não configurado). Fonte da
 // verdade pra tela toda: webhook, Drive e Pasta.
@@ -51,5 +51,18 @@ export function useSalvarConfiguracaoBitrix(funcionarioId: number) {
   return useMutation({
     mutationFn: (payload: SalvarBitrixConfiguracaoPayload) => bitrixService.salvarConfiguracao(payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["bitrix-configuracao", funcionarioId] }),
+  });
+}
+
+// Envia o PDF de fotos/relatório da OS pro Bitrix. Só faz o POST — a
+// confirmação de que o envio realmente aconteceu precisa ser feita por quem
+// chama, reconferindo pdfFotoEnviado/pdfRelatorioEnviado na OS depois (ver
+// nota em bitrixService.enviarPdf sobre o back sempre responder 200).
+// Ainda assim invalida a query da OS pra manter outros lugares em sincronia.
+export function useEnviarPdfBitrix(idOs: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (tipo: TipoEnvioBitrix) => bitrixService.enviarPdf(idOs, tipo),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ordem-servico", idOs] }),
   });
 }

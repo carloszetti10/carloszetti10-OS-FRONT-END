@@ -71,6 +71,8 @@ export interface OrdemServico {
   possuiPdfAssinado: boolean; // novo campo (back) — true quando já existe um PDF assinado salvo
   possuiPdfFotos: boolean; // true quando já existe um PDF de fotos do atendimento salvo
   idTarefa?: number | null; // id da tarefa vinculada no Bitrix
+  pdfFotoEnviado: boolean; // true quando o PDF de fotos já foi enviado pro Bitrix
+  pdfRelatorioEnviado: boolean; // true quando o PDF do relatório já foi enviado pro Bitrix
 }
 
 // Espelha FiltroOrdemServicoDto (query string de GET /OrdemServico/paginado).

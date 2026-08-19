@@ -41,3 +41,17 @@ export interface BuscarBitrixConfiguracao {
   driveId: string | null;
   pastaId: string | null;
 }
+
+// Espelha OS_API.Services.Bitrix.DTOs.TipoEnvio (enum sem JsonStringEnumConverter
+// registrado no back, então trafega como número — igual aos outros enums do projeto,
+// ver types/enums.ts).
+export enum TipoEnvioBitrix {
+  Foto = 1,
+  Relatorio = 2,
+  Todos = 3,
+}
+
+// Espelha AddPdfBitrixDto (POST /Bitrix/enviar-pdf/{idOs}).
+export interface EnviarPdfBitrixPayload {
+  tipo: TipoEnvioBitrix;
+}

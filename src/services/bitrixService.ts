@@ -4,7 +4,9 @@ import type {
   BitrixListaResponse,
   BitrixWebhookPayload,
   BuscarBitrixConfiguracao,
+  EnviarPdfBitrixPayload,
   SalvarBitrixConfiguracaoPayload,
+  TipoEnvioBitrix,
 } from "@/types/bitrix";
 
 export const bitrixService = {
@@ -66,5 +68,16 @@ export const bitrixService = {
   // pra criar quanto pra atualizar/editar a seleção de Drive/Pasta.
   salvarConfiguracao: async (payload: SalvarBitrixConfiguracaoPayload): Promise<void> => {
     await api.post("/Bitrix/config", payload);
+  },
+
+  // POST /Bitrix/enviar-pdf/{idOs} — envia o PDF (fotos ou relatório) da OS
+  // pro Bitrix e anexa na tarefa vinculada. NOTA: o controller sempre
+  // responde 200 aqui mesmo quando o envio falha por dentro (a exceção é
+  // engolida em EnviarEAnexarPdfBitrix, no back) — por isso quem chama isso
+  // não pode confiar só no 200; precisa reconferir pdfFotoEnviado/
+  // pdfRelatorioEnviado na OS depois (ver useEnviarPdfBitrix).
+  enviarPdf: async (idOs: number, tipo: TipoEnvioBitrix): Promise<void> => {
+    const payload: EnviarPdfBitrixPayload = { tipo };
+    await api.post(`/Bitrix/enviar-pdf/${idOs}`, payload);
   },
 };

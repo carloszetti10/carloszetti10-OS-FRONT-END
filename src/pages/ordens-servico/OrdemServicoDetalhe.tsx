@@ -2,17 +2,20 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Lock, FileText, User as UserIcon, Pencil, FileSignature, FileDown, PlayCircle, Ban, Camera } from "lucide-react";
+import { ArrowLeft, Lock, FileText, User as UserIcon, Pencil, FileSignature, FileDown, PlayCircle, Ban, Camera, CheckCircle2, UploadCloud } from "lucide-react";
 import {
   useOrdemServico,
   useAtualizarRelatorio,
   useAlterarStatusOs,
   useFuncionariosDaOs,
 } from "@/hooks/useOrdensServico";
+import { useConfiguracaoBitrix, useEnviarPdfBitrix } from "@/hooks/useBitrix";
+import { TipoEnvioBitrix } from "@/types/bitrix";
 import { useFuncionarioLogado } from "@/hooks/useFuncionarioLogado";
 import { ordemServicoService } from "@/services/ordemServicoService";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 import { Textarea } from "@/components/ui/Textarea";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { TelaCarregando } from "@/components/ui/Spinner";
@@ -34,9 +37,22 @@ export default function OrdemServicoDetalhe() {
   const navigate = useNavigate();
   const mostrarToast = useToastStore((s) => s.mostrar);
 
-  const { data: os, isLoading } = useOrdemServico(idOs);
+  const { data: os, isLoading, refetch: refetchOs } = useOrdemServico(idOs);
   const { data: funcionariosDaOs, isLoading: carregandoFuncionarios } = useFuncionariosDaOs(idOs);
   const { data: funcionarioLogado } = useFuncionarioLogado();
+
+  // ehResponsavel precisa ser calculado aqui em cima (antes dos "return"
+  // abaixo) porque o hook useConfiguracaoBitrix, logo em seguida, depende
+  // dele — hooks não podem vir depois de um return condicional.
+  const responsavelDaOs = os?.funcionarios.find((f) => f.responsavel);
+  const ehResponsavel = !!responsavelDaOs && responsavelDaOs.idFuncionario === funcionarioLogado?.id;
+
+  // Config Bitrix do responsável — só busca quando o usuário logado É o
+  // responsável (é a única situação em que os botões de envio podem
+  // aparecer, então evita uma chamada à toa pros demais casos).
+  const configBitrixQuery = useConfiguracaoBitrix(ehResponsavel ? responsavelDaOs!.idFuncionario : null);
+  const { mutateAsync: enviarPdfBitrix, isPending: enviandoPdfBitrix } = useEnviarPdfBitrix(idOs);
+  const [tipoEnviandoBitrix, setTipoEnviandoBitrix] = useState<TipoEnvioBitrix | null>(null);
 
   const { mutate: salvarRelatorio, isPending: salvandoRelatorio, error: erroRelatorio } =
     useAtualizarRelatorio(idOs);
@@ -67,9 +83,6 @@ export default function OrdemServicoDetalhe() {
   const osTravada = osConcluida || osCancelada;
   const podeIniciar = os.status === StatusOs.Agendada;
   const podeCancelar = !osTravada;
-  const ehResponsavel = os.funcionarios.some(
-    (f) => f.responsavel && f.idFuncionario === funcionarioLogado?.id
-  );
   // Regra: só o responsável edita o relatório, e nunca se a OS estiver
   // concluída ou cancelada. O back valida isso de verdade
   // (VerificarTecnicoEResponsavelAsync + falharSeOSConcluida); aqui é só
@@ -82,6 +95,41 @@ export default function OrdemServicoDetalhe() {
   const osNaoIniciada = podeIniciar;
   const temRelatorioPreenchido = !!os.relatorioTecnico?.trim();
   const podeGerarRelatorio = ehResponsavel && !osTravada && !osNaoIniciada && temRelatorioPreenchido;
+
+  // Card do Bitrix só aparece se: usuário logado é o responsável, o
+  // responsável tem Drive+Pasta configurados (webhook sozinho não basta —
+  // sem Drive/Pasta o envio no back não tem pra onde mandar o arquivo), e
+  // pelo menos um dos dois PDFs já existe pra oferecer o envio dele.
+  const responsavelTemBitrixConfigurado =
+    configBitrixQuery.isSuccess && !!configBitrixQuery.data?.driveId && !!configBitrixQuery.data?.pastaId;
+  const mostrarCardBitrix =
+    ehResponsavel && responsavelTemBitrixConfigurado && (os.possuiPdfFotos || os.possuiPdfAssinado);
+
+  async function aoEnviarPdfBitrix(tipo: TipoEnvioBitrix) {
+    setTipoEnviandoBitrix(tipo);
+    try {
+      await enviarPdfBitrix(tipo);
+      // O back sempre responde 200 aqui mesmo quando o envio falha por
+      // dentro (ver nota em bitrixService.enviarPdf), então só confiamos
+      // que deu certo depois de reconferir o campo real na OS.
+      const { data: osAtualizada } = await refetchOs();
+      const enviadoDeVerdade =
+        tipo === TipoEnvioBitrix.Foto ? osAtualizada?.pdfFotoEnviado : osAtualizada?.pdfRelatorioEnviado;
+
+      if (enviadoDeVerdade) {
+        mostrarToast(
+          `PDF de ${tipo === TipoEnvioBitrix.Foto ? "fotos" : "relatório"} enviado para o Bitrix.`,
+          "sucesso"
+        );
+      } else {
+        mostrarToast("O Bitrix não confirmou o recebimento do PDF. Tente novamente.", "erro");
+      }
+    } catch (erro) {
+      mostrarToast(extrairMensagemErro(erro), "erro");
+    } finally {
+      setTipoEnviandoBitrix(null);
+    }
+  }
 
   function aoSalvarRelatorio(dados: RelatorioFormValues) {
     salvarRelatorio(dados, {
@@ -247,58 +295,117 @@ export default function OrdemServicoDetalhe() {
           </div>
         </Card>
 
-        <Card>
-          <h2 className="mb-3 flex items-center gap-2 font-display font-semibold">
-            <UserIcon className="h-4 w-4" /> Funcionários
-          </h2>
+        <div className="space-y-4">
+          <Card>
+            <h2 className="mb-3 flex items-center gap-2 font-display font-semibold">
+              <UserIcon className="h-4 w-4" /> Funcionários
+            </h2>
 
-          {osTravada ? (
-            carregandoFuncionarios ? (
-              <div className="space-y-2">
-                <Skeleton className="h-5 w-full" />
-                <Skeleton className="h-5 w-full" />
-              </div>
+            {osTravada ? (
+              carregandoFuncionarios ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-5 w-full" />
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {(funcionariosDaOs ?? []).map((f) => (
+                    <li key={f.idOsFuncionario} className="flex items-center justify-between text-sm">
+                      <span>{f.nomeFuncionario}</span>
+                      {f.responsavel && (
+                        <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-300">
+                          Responsável
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                  {(funcionariosDaOs ?? []).length === 0 && (
+                    <li className="text-sm text-neutral-400">Nenhum funcionário vinculado.</li>
+                  )}
+                </ul>
+              )
             ) : (
-              <ul className="space-y-2">
-                {(funcionariosDaOs ?? []).map((f) => (
-                  <li key={f.idOsFuncionario} className="flex items-center justify-between text-sm">
-                    <span>{f.nomeFuncionario}</span>
-                    {f.responsavel && (
-                      <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-300">
-                        Responsável
-                      </span>
-                    )}
-                  </li>
-                ))}
-                {(funcionariosDaOs ?? []).length === 0 && (
-                  <li className="text-sm text-neutral-400">Nenhum funcionário vinculado.</li>
-                )}
-              </ul>
-            )
-          ) : (
-            <GerenciarFuncionariosOs idOs={idOs} />
-          )}
+              <GerenciarFuncionariosOs idOs={idOs} />
+            )}
 
-          {(podeIniciar || podeCancelar) && (
-            <div className="mt-4 space-y-2 border-t border-neutral-100 pt-4 dark:border-neutral-800">
-              {podeIniciar && (
-                <Button size="sm" className="w-full" carregando={alterandoStatus} onClick={aoIniciar}>
-                  <PlayCircle className="h-4 w-4" /> Iniciar OS
-                </Button>
-              )}
-              {podeCancelar && (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="w-full"
-                  onClick={() => setConfirmandoCancelamento(true)}
-                >
-                  <Ban className="h-4 w-4" /> Cancelar OS
-                </Button>
-              )}
-            </div>
+            {(podeIniciar || podeCancelar) && (
+              <div className="mt-4 space-y-2 border-t border-neutral-100 pt-4 dark:border-neutral-800">
+                {podeIniciar && (
+                  <Button size="sm" className="w-full" carregando={alterandoStatus} onClick={aoIniciar}>
+                    <PlayCircle className="h-4 w-4" /> Iniciar OS
+                  </Button>
+                )}
+                {podeCancelar && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => setConfirmandoCancelamento(true)}
+                  >
+                    <Ban className="h-4 w-4" /> Cancelar OS
+                  </Button>
+                )}
+              </div>
+            )}
+          </Card>
+
+          {mostrarCardBitrix && (
+            <Card>
+              <h2 className="mb-3 flex items-center gap-2 font-display font-semibold">
+                <UploadCloud className="h-4 w-4" /> Bitrix
+              </h2>
+              <div className="space-y-3">
+                {os.possuiPdfFotos && (
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Camera className="h-4 w-4 text-neutral-400" />
+                      <span>PDF de Fotos</span>
+                    </div>
+                    {os.pdfFotoEnviado ? (
+                      <Badge cor="verde">
+                        <CheckCircle2 className="mr-1 h-3 w-3" /> Enviado
+                      </Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        disabled={enviandoPdfBitrix}
+                        carregando={tipoEnviandoBitrix === TipoEnvioBitrix.Foto}
+                        onClick={() => aoEnviarPdfBitrix(TipoEnvioBitrix.Foto)}
+                      >
+                        <UploadCloud className="h-4 w-4" /> Enviar
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                {os.possuiPdfAssinado && (
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <FileText className="h-4 w-4 text-neutral-400" />
+                      <span>PDF do Relatório</span>
+                    </div>
+                    {os.pdfRelatorioEnviado ? (
+                      <Badge cor="verde">
+                        <CheckCircle2 className="mr-1 h-3 w-3" /> Enviado
+                      </Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        disabled={enviandoPdfBitrix}
+                        carregando={tipoEnviandoBitrix === TipoEnvioBitrix.Relatorio}
+                        onClick={() => aoEnviarPdfBitrix(TipoEnvioBitrix.Relatorio)}
+                      >
+                        <UploadCloud className="h-4 w-4" /> Enviar
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </Card>
           )}
-        </Card>
+        </div>
       </div>
 
       <Card>
