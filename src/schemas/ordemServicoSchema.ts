@@ -15,6 +15,11 @@ export const ordemServicoSchema = z.object({
   idCliente: z.number({ invalid_type_error: "Selecione o cliente." }).int().positive("Selecione o cliente."),
   prazo: z.string().optional().or(z.literal("")),
   observacao: z.string().optional().or(z.literal("")),
+  idTarefa: z
+    .string()
+    .optional()
+    .or(z.literal(""))
+    .refine((v) => !v || /^\d+$/.test(v), "Informe um ID de tarefa numérico."),
   funcionarios: z
     .array(funcionarioSelecionadoSchema)
     .min(1, "Adicione ao menos um funcionário.")
@@ -39,5 +44,10 @@ export const editarOrdemServicoSchema = z.object({
   tituloOs: z.string().min(1, "O título é obrigatório."),
   descricao: z.string().optional().or(z.literal("")),
   prazo: z.string().optional().or(z.literal("")),
+  idTarefa: z
+    .string()
+    .optional()
+    .or(z.literal(""))
+    .refine((v) => !v || /^\d+$/.test(v), "Informe um ID de tarefa numérico."),
 });
 export type EditarOrdemServicoFormValues = z.infer<typeof editarOrdemServicoSchema>;

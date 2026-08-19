@@ -10,6 +10,7 @@ const ROTULOS: Record<string, string> = {
   permissoes: "Permissões",
   perfil: "Meu perfil",
   configuracoes: "Configurações",
+  bitrix: "Bitrix",
 };
 
 /** Gera as migalhas de pão a partir do path atual da URL */

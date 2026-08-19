@@ -61,6 +61,7 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
         prazo: paraIso(dados.prazo),
         observacao: dados.observacao || undefined,
         funcionarios: dados.funcionarios,
+        idTarefa: dados.idTarefa ? Number(dados.idTarefa) : undefined,
       },
       {
         onSuccess: () => {
@@ -142,6 +143,18 @@ export function OrdemServicoFormModal({ aberto, aoFechar }: OrdemServicoFormModa
           <div className="sm:w-56 sm:shrink-0">
             <Input label="Prazo" type="datetime-local" erro={errors.prazo?.message} {...register("prazo")} />
           </div>
+        </div>
+
+        {/* ID da tarefa vinculada no Bitrix — opcional, o funcionário cola o
+            ID depois de criar a tarefa lá. */}
+        <div className="sm:w-56">
+          <Input
+            label="ID da Tarefa (Bitrix)"
+            type="number"
+            placeholder="Opcional"
+            erro={errors.idTarefa?.message}
+            {...register("idTarefa")}
+          />
         </div>
 
         {/* Equipe — picker com chips + busca que cresce verticalmente,

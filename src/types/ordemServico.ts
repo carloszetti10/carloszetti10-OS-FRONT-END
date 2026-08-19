@@ -23,6 +23,7 @@ export interface CriarOrdemServicoPayload {
   prazo?: string | null;
   observacao?: string;
   funcionarios: OsFuncionarioPayload[];
+  idTarefa?: number | null;
 }
 
 // Espelha AtualizarOrdemServicoDto
@@ -36,6 +37,7 @@ export interface AtualizarOrdemServicoPayload {
   dataHoraFim?: string | null;
   prazo?: string | null;
   observacao?: string;
+  idTarefa?: number | null;
 }
 
 // Espelha AtualizarRelatorioDto
@@ -68,6 +70,9 @@ export interface OrdemServico {
   funcionarios: OsFuncionarioPayload[];
   possuiPdfAssinado: boolean; // novo campo (back) — true quando já existe um PDF assinado salvo
   possuiPdfFotos: boolean; // true quando já existe um PDF de fotos do atendimento salvo
+  idTarefa?: number | null; // id da tarefa vinculada no Bitrix
+  pdfFotoEnviado: boolean; // true quando o PDF de fotos já foi enviado pro Bitrix
+  pdfRelatorioEnviado: boolean; // true quando o PDF do relatório já foi enviado pro Bitrix
 }
 
 // Espelha FiltroOrdemServicoDto (query string de GET /OrdemServico/paginado).

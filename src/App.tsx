@@ -13,6 +13,7 @@ import TiposAtendimentoList from "@/pages/tipos-atendimento/TiposAtendimentoList
 import GerenciarPermissoes from "@/pages/permissoes/GerenciarPermissoes";
 import Perfil from "@/pages/Perfil";
 import Configuracoes from "@/pages/Configuracoes";
+import ConfiguracaoBitrix from "@/pages/configuracoes/ConfiguracaoBitrix";
 import AssinaturaPublica from "@/pages/assinatura/AssinaturaPublica";
 import RegistrarFotos from "@/pages/fotos/RegistrarFotos";
 import NotFound from "@/pages/NotFound";
@@ -39,6 +40,7 @@ export default function App() {
             <Route path="/permissoes" element={<GerenciarPermissoes />} />
             <Route path="/perfil" element={<Perfil />} />
             <Route path="/configuracoes" element={<Configuracoes />} />
+            <Route path="/configuracoes/bitrix" element={<ConfiguracaoBitrix />} />
           </Route>
         </Route>
 

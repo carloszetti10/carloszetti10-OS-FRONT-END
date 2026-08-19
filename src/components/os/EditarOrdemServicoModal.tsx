@@ -42,6 +42,7 @@ export function EditarOrdemServicoModal({ aberto, aoFechar, ordemServico }: Edit
       tituloOs: ordemServico.tituloOs,
       descricao: ordemServico.descricao ?? "",
       prazo: paraInputDatetime(ordemServico.prazo),
+      idTarefa: ordemServico.idTarefa != null ? String(ordemServico.idTarefa) : "",
     });
   }, [aberto, ordemServico, reset]);
 
@@ -57,6 +58,7 @@ export function EditarOrdemServicoModal({ aberto, aoFechar, ordemServico }: Edit
         dataHoraFim: ordemServico.dataHoraFim ?? null,
         prazo: paraIso(dados.prazo) ?? null,
         observacao: ordemServico.observacao ?? undefined,
+        idTarefa: dados.idTarefa ? Number(dados.idTarefa) : null,
       },
       {
         onSuccess: () => {
@@ -74,6 +76,14 @@ export function EditarOrdemServicoModal({ aberto, aoFechar, ordemServico }: Edit
         <Textarea label="Descrição" erro={errors.descricao?.message} {...register("descricao")} />
 
         <Input label="Prazo" type="datetime-local" erro={errors.prazo?.message} {...register("prazo")} />
+
+        <Input
+          label="ID da Tarefa (Bitrix)"
+          type="number"
+          placeholder="Opcional"
+          erro={errors.idTarefa?.message}
+          {...register("idTarefa")}
+        />
 
         {error && (
           <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950">
