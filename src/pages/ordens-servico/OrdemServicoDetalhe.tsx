@@ -239,6 +239,10 @@ export default function OrdemServicoDetalhe() {
                 <p className="text-neutral-400">Finalizada em</p>
                 <p>{formatarDataHora(os.dataHoraFim)}</p>
               </div>
+              <div>
+                <p className="text-neutral-400">ID da Tarefa (Bitrix)</p>
+                <p>{os.idTarefa ?? "—"}</p>
+              </div>
             </div>
           </div>
         </Card>
