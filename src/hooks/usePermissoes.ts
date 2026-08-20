@@ -20,3 +20,9 @@ export function usePodeGerenciarPermissoes(): boolean {
   const permissoes = obterPermissoesDoToken(token);
   return permissoes.includes("Usuario.GerenciarPermissoes");
 }
+
+export function usePodeConfigurarBitrix(): boolean {
+  const token = useAuthStore((s) => s.token);
+  const permissoes = obterPermissoesDoToken(token);
+  return permissoes.includes("Bitrix.Configurar");
+}
