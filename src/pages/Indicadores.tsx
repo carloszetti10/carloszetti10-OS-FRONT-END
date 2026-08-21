@@ -165,16 +165,35 @@ export default function Indicadores() {
             />
           ) : (
             <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={porConsultor}>
+              <BarChart data={porConsultor} barCategoryGap="32%">
+                <defs>
+                  <linearGradient id="gradienteConsultor" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#4bd18d" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#0f4831" stopOpacity={1} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   vertical={false}
                   className="stroke-neutral-200 dark:stroke-neutral-800"
                 />
-                <XAxis dataKey="nome" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={60} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(valor: number) => [valor, "OS concluídas"]} />
-                <Bar dataKey="quantidade" fill="#22b06b" radius={[6, 6, 0, 0]} />
+                <XAxis
+                  dataKey="nome"
+                  tick={{ fontSize: 11 }}
+                  interval={0}
+                  angle={-20}
+                  textAnchor="end"
+                  height={60}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip
+                  cursor={{ fill: "rgba(34,176,107,0.08)" }}
+                  formatter={(valor: number) => [valor, "OS concluídas"]}
+                  contentStyle={{ borderRadius: 12, border: "1px solid #e5e7eb", fontSize: 12 }}
+                />
+                <Bar dataKey="quantidade" fill="url(#gradienteConsultor)" radius={[8, 8, 4, 4]} maxBarSize={48} />
               </BarChart>
             </ResponsiveContainer>
           )}
