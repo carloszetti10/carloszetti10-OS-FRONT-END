@@ -1,7 +1,5 @@
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { ordemServicoService } from "@/services/ordemServicoService";
-import { useFuncionarioLogado } from "./useFuncionarioLogado";
-import { usePodeVerTodasAsOs } from "./usePermissoes";
 import type {
   CriarOrdemServicoPayload,
   AtualizarOrdemServicoPayload,
@@ -11,36 +9,6 @@ import type {
   FiltroOrdensServico,
   FiltroIndicadores,
 } from "@/types/ordemServico";
-
-/**
- * Lista as OS.
- * TODO(back): GET /api/OrdemServico ainda devolve TODAS as ordens, sem
- * suportar filtro por funcionário. A regra "o funcionário só vê as OS às
- * quais está vinculado" está sendo aplicada aqui no front, comparando
- * ordem.funcionarios[].idFuncionario com o id do funcionário logado.
- * Isso é só uma camada de UX — quem bater direto na API vê tudo, então
- * essa regra precisa migrar pro back (query param ?idFuncionario= ou
- * filtro automático pelo usuário autenticado) assim que possível.
- *
- * Exceção: usuários com permissão de Gestor/Administrador (ver
- * hooks/usePermissoes.ts) enxergam todas as OS, sem esse filtro.
- */
-export function useOrdensServico() {
-  const { data: funcionarioLogado } = useFuncionarioLogado();
-  const podeVerTodas = usePodeVerTodasAsOs();
-
-  return useQuery({
-    queryKey: ["ordens-servico", funcionarioLogado?.id, podeVerTodas],
-    enabled: podeVerTodas || !!funcionarioLogado,
-    queryFn: async () => {
-      const todas = await ordemServicoService.listar();
-      if (podeVerTodas) return todas;
-      return todas.filter((os) =>
-        os.funcionarios.some((f) => f.idFuncionario === funcionarioLogado!.id)
-      );
-    },
-  });
-}
 
 export function useOrdemServico(id: number | undefined) {
   return useQuery({

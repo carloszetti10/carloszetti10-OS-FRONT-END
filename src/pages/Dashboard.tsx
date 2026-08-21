@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useState } from "react";
 import { Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Cell } from "recharts";
 import {
@@ -11,24 +11,20 @@ import {
   TrendingDown,
   Minus,
 } from "lucide-react";
-import { useOrdensServico } from "@/hooks/useOrdensServico";
+import { useDashboard } from "@/hooks/useDashboard";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { StatusOsBadge } from "@/components/os/StatusOsBadge";
 import { StatusOs, STATUS_OS_LABEL } from "@/types/enums";
+import type { PeriodoDashboard, StatusDistribuicao } from "@/types/dashboard";
 import { formatarData } from "@/utils/formatters";
-import type { OrdemServico } from "@/types/ordemServico";
 import { cn } from "@/utils/cn";
 
-const STATUS_ABERTOS = [StatusOs.Agendada, StatusOs.EmAtendimento];
-
-type Periodo = "24h" | "7d" | "30d";
-
-const PERIODOS: { valor: Periodo; rotulo: string; rotuloCurto: string; horas: number }[] = [
-  { valor: "24h", rotulo: "Últimas 24 h", rotuloCurto: "Últimas 24 h", horas: 24 },
-  { valor: "7d", rotulo: "Últimos 7 dias", rotuloCurto: "Últimos 7 dias", horas: 24 * 7 },
-  { valor: "30d", rotulo: "Últimos 30 dias", rotuloCurto: "Últimos 30 dias", horas: 24 * 30 },
+const PERIODOS: { valor: PeriodoDashboard; rotulo: string; rotuloCurto: string }[] = [
+  { valor: "24h", rotulo: "Últimas 24 h", rotuloCurto: "Últimas 24 h" },
+  { valor: "7d", rotulo: "Últimos 7 dias", rotuloCurto: "Últimos 7 dias" },
+  { valor: "30d", rotulo: "Últimos 30 dias", rotuloCurto: "Últimos 30 dias" },
 ];
 
 const FILTROS_STATUS: { valor: "todos" | StatusOs; rotulo: string }[] = [
@@ -39,98 +35,18 @@ const FILTROS_STATUS: { valor: "todos" | StatusOs; rotulo: string }[] = [
   { valor: StatusOs.EmAtendimento, rotulo: STATUS_OS_LABEL[StatusOs.EmAtendimento] },
 ];
 
-/** Filtra as OS cuja dataHoraInicio caiu dentro das últimas `horas` a partir de agora. */
-function filtrarPorPeriodo(ordens: OrdemServico[] | undefined, horas: number, referencia: Date) {
-  if (!ordens) return [];
-  const limite = referencia.getTime() - horas * 60 * 60 * 1000;
-  return ordens.filter((o) => {
-    if (!o.dataHoraInicio) return false;
-    const t = new Date(o.dataHoraInicio).getTime();
-    return !Number.isNaN(t) && t >= limite && t <= referencia.getTime();
-  });
-}
-
-/** Agrupa as OS do período selecionado em baldes de tempo pro gráfico de volume. */
-function gerarSeriesVolume(ordens: OrdemServico[], periodo: Periodo, referencia: Date) {
-  const config = {
-    "24h": { baldes: 6, passoMs: 4 * 60 * 60 * 1000, formato: (d: Date) => `${String(d.getHours()).padStart(2, "0")}h` },
-    "7d": { baldes: 7, passoMs: 24 * 60 * 60 * 1000, formato: (d: Date) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) },
-    "30d": { baldes: 10, passoMs: 3 * 24 * 60 * 60 * 1000, formato: (d: Date) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) },
-  }[periodo];
-
-  const fim = referencia.getTime();
-  const inicio = fim - config.baldes * config.passoMs;
-
-  const baldes = Array.from({ length: config.baldes }, (_, i) => {
-    const inicioBalde = inicio + i * config.passoMs;
-    const fimBalde = inicioBalde + config.passoMs;
-    return { inicioBalde, fimBalde, quantidade: 0 };
-  });
-
-  for (const os of ordens) {
-    if (!os.dataHoraInicio) continue;
-    const t = new Date(os.dataHoraInicio).getTime();
-    const balde = baldes.find((b) => t >= b.inicioBalde && t < b.fimBalde);
-    if (balde) balde.quantidade += 1;
-  }
-
-  return baldes.map((b) => ({
-    label: config.formato(new Date(b.inicioBalde)),
-    quantidade: b.quantidade,
-  }));
-}
-
 export default function Dashboard() {
-  // Lembrete: useOrdensServico já devolve só as OS do funcionário logado
-  // (filtro client-side — ver TODO em hooks/useOrdensServico.ts)
-  const { data: ordens, isLoading: carregandoOs } = useOrdensServico();
-
-  const [periodo, setPeriodo] = useState<Periodo>("7d");
+  const [periodo, setPeriodo] = useState<PeriodoDashboard>("7d");
   const [filtroStatus, setFiltroStatus] = useState<"todos" | StatusOs>("todos");
 
   const configPeriodo = PERIODOS.find((p) => p.valor === periodo)!;
-  const referencia = useMemo(() => new Date(), []);
 
-  // OS que caem dentro do período atualmente selecionado
-  const ordensNoPeriodo = useMemo(
-    () => filtrarPorPeriodo(ordens, configPeriodo.horas, referencia),
-    [ordens, configPeriodo.horas, referencia]
-  );
-
-  // Mesma janela de tempo, mas imediatamente anterior — usada só pra calcular a variação (%) do volume
-  const ordensPeriodoAnterior = useMemo(() => {
-    if (!ordens) return [];
-    const fimAnterior = referencia.getTime() - configPeriodo.horas * 60 * 60 * 1000;
-    const inicioAnterior = fimAnterior - configPeriodo.horas * 60 * 60 * 1000;
-    return ordens.filter((o) => {
-      if (!o.dataHoraInicio) return false;
-      const t = new Date(o.dataHoraInicio).getTime();
-      return !Number.isNaN(t) && t >= inicioAnterior && t < fimAnterior;
-    });
-  }, [ordens, configPeriodo.horas, referencia]);
-
-  const total = ordensNoPeriodo.length;
-  const abertas = ordensNoPeriodo.filter((o) => STATUS_ABERTOS.includes(o.status)).length;
-  const concluidas = ordensNoPeriodo.filter((o) => o.status === StatusOs.Concluida).length;
-  const atrasadas = ordensNoPeriodo.filter((o) => o.status === StatusOs.Atrasada).length;
-
-  const variacaoVolume =
-    ordensPeriodoAnterior.length === 0
-      ? total > 0
-        ? 100
-        : 0
-      : Math.round(((total - ordensPeriodoAnterior.length) / ordensPeriodoAnterior.length) * 100);
-
-  const serieVolume = useMemo(
-    () => gerarSeriesVolume(ordensNoPeriodo, periodo, referencia),
-    [ordensNoPeriodo, periodo, referencia]
-  );
-
-  // Lista filtrada pelo dropdown de status, respeitando o período selecionado
-  const ordensFiltradas =
-    filtroStatus === "todos" ? ordensNoPeriodo : ordensNoPeriodo.filter((o) => o.status === filtroStatus);
-
-  const ultimasOs = [...ordensFiltradas].sort((a, b) => b.idOs - a.idOs).slice(0, 6);
+  // Toda a agregação (totais, variação %, série de volume, distribuição por
+  // status e últimas OS) já vem calculada do back — GET /api/Dashboard.
+  const { data: metricas, isLoading: carregando } = useDashboard({
+    periodo,
+    statusFiltro: filtroStatus === "todos" ? undefined : filtroStatus,
+  });
 
   return (
     <div className="space-y-6">
@@ -177,15 +93,15 @@ export default function Dashboard() {
         <CardKpi
           icone={<ClipboardList className="h-4 w-4" />}
           rotulo="Total de OS"
-          valor={carregandoOs ? undefined : total}
+          valor={carregando ? undefined : metricas?.totalOs}
           badge={{ tipo: "neutro", texto: configPeriodo.rotuloCurto }}
         />
         <CardKpi
           icone={<Clock3 className="h-4 w-4" />}
           rotulo="Em aberto"
-          valor={carregandoOs ? undefined : abertas}
+          valor={carregando ? undefined : metricas?.abertas}
           badge={
-            abertas > 0
+            (metricas?.abertas ?? 0) > 0
               ? { tipo: "negativo", texto: "Requer atenção" }
               : { tipo: "neutro", texto: configPeriodo.rotuloCurto }
           }
@@ -193,15 +109,15 @@ export default function Dashboard() {
         <CardKpi
           icone={<CheckCircle2 className="h-4 w-4" />}
           rotulo="Concluídas"
-          valor={carregandoOs ? undefined : concluidas}
+          valor={carregando ? undefined : metricas?.concluidas}
           badge={{ tipo: "positivo", texto: configPeriodo.rotuloCurto }}
         />
         <CardKpi
           icone={<AlertTriangle className="h-4 w-4" />}
           rotulo="Atrasadas"
-          valor={carregandoOs ? undefined : atrasadas}
+          valor={carregando ? undefined : metricas?.atrasadas}
           badge={
-            atrasadas > 0
+            (metricas?.atrasadas ?? 0) > 0
               ? { tipo: "negativo", texto: "Requer atenção" }
               : { tipo: "neutro", texto: configPeriodo.rotuloCurto }
           }
@@ -214,16 +130,16 @@ export default function Dashboard() {
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h2 className="font-display font-semibold">Solicitações</h2>
-              <VariacaoBadge valor={variacaoVolume} />
+              <VariacaoBadge valor={metricas?.variacaoVolumePercentual ?? 0} />
             </div>
             <span className="text-xs text-neutral-500">{configPeriodo.rotuloCurto}</span>
           </div>
 
-          {carregandoOs ? (
+          {carregando ? (
             <Skeleton className="h-[220px] w-full" />
           ) : (
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={serieVolume} barCategoryGap="28%">
+              <BarChart data={metricas?.serieVolume ?? []} barCategoryGap="28%">
                 <defs>
                   <linearGradient id="gradienteVolume" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#4bd18d" stopOpacity={1} />
@@ -253,17 +169,17 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          {carregandoOs ? (
+          {carregando ? (
             <div className="space-y-2">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
             </div>
-          ) : ultimasOs.length === 0 ? (
+          ) : !metricas || metricas.ultimasOs.length === 0 ? (
             <p className="py-8 text-center text-sm text-neutral-500">Nenhuma OS encontrada para esse filtro.</p>
           ) : (
             <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
-              {ultimasOs.map((os) => (
+              {metricas.ultimasOs.map((os) => (
                 <Link
                   key={os.idOs}
                   to={`/ordens-servico/${os.idOs}`}
@@ -286,7 +202,7 @@ export default function Dashboard() {
       {/* Distribuição por status */}
       <Card>
         <h2 className="mb-4 font-display font-semibold">Distribuição por status</h2>
-        <GraficoStatus ordens={ordensNoPeriodo} carregando={carregandoOs} />
+        <GraficoStatus dados={metricas?.distribuicaoStatus} carregando={carregando} />
       </Card>
     </div>
   );
@@ -301,8 +217,8 @@ function SegmentedControl({
   onChange,
   opcoes,
 }: {
-  value: Periodo;
-  onChange: (v: Periodo) => void;
+  value: PeriodoDashboard;
+  onChange: (v: PeriodoDashboard) => void;
   opcoes: typeof PERIODOS;
 }) {
   return (
@@ -414,26 +330,26 @@ const CORES_STATUS: Record<StatusOs, string> = {
   [StatusOs.Atrasada]: "#ef4444",
 };
 
-function GraficoStatus({ ordens, carregando }: { ordens: OrdemServico[]; carregando: boolean }) {
-  const dados = Object.values(StatusOs)
-    .filter((v): v is StatusOs => typeof v === "number")
-    .map((status) => ({
-      status: STATUS_OS_LABEL[status],
-      quantidade: ordens.filter((o) => o.status === status).length,
-      cor: CORES_STATUS[status],
-    }));
-
+function GraficoStatus({ dados, carregando }: { dados: StatusDistribuicao[] | undefined; carregando: boolean }) {
   if (carregando) return <Skeleton className="h-[200px] w-full" />;
+
+  // A distribuição (já com todos os status, zero-preenchida quando vazia)
+  // vem pronta do back — aqui só resolvemos rótulo/cor pra exibição.
+  const dadosGrafico = (dados ?? []).map((d) => ({
+    status: STATUS_OS_LABEL[d.status],
+    quantidade: d.quantidade,
+    cor: CORES_STATUS[d.status],
+  }));
 
   return (
     <ResponsiveContainer width="100%" height={200}>
-      <BarChart data={dados} layout="vertical" margin={{ left: 8 }}>
+      <BarChart data={dadosGrafico} layout="vertical" margin={{ left: 8 }}>
         <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-neutral-200 dark:stroke-neutral-800" />
         <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
         <YAxis type="category" dataKey="status" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} width={100} />
         <Tooltip formatter={(valor: number) => [valor, "OS"]} contentStyle={{ borderRadius: 12, fontSize: 12 }} />
         <Bar dataKey="quantidade" radius={[0, 8, 8, 0]} maxBarSize={22}>
-          {dados.map((d) => (
+          {dadosGrafico.map((d) => (
             <Cell key={d.status} fill={d.cor} />
           ))}
         </Bar>

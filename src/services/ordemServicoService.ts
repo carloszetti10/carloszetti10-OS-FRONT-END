@@ -15,15 +15,6 @@ import type {
 import type { TokenAssinatura } from "@/types/assinatura";
 
 export const ordemServicoService = {
-  // GET /api/OrdemServico
-  // ATENÇÃO: não existe filtro por query string no back — devolve TODAS as OS.
-  // O filtro "só as OS vinculadas ao funcionário logado" é feito no front
-  // (ver hooks/useOrdensServico.ts) até virar uma regra real no back.
-  listar: async (): Promise<OrdemServico[]> => {
-    const { data } = await api.get<OrdemServico[]>("/OrdemServico");
-    return data;
-  },
-
   // GET /api/OrdemServico/paginado — com filtro e paginação de verdade no back
   // (o filtro "só vê OS vinculada" já é aplicado lá, pela permissão do usuário).
   listarPaginado: async (filtro: FiltroOrdensServico): Promise<ResultadoPaginadoOrdemServico> => {
